@@ -1,0 +1,16 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: devatlas-mysql
+    environment:
+      MYSQL_DATABASE: devatlas
+      MYSQL_USER: devatlas_user
+      MYSQL_PASSWORD: devatlas_password
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - devatlas_data:/var/lib/mysql
+
+volumes:
+  devatlas_data:

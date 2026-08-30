@@ -1,0 +1,99 @@
+package com.xuannie.devatlas.workspace.application;
+
+import com.xuannie.devatlas.page.common.constants.WorkspaceConstants;
+import com.xuannie.devatlas.page.domain.repository.PageRepository;
+import com.xuannie.devatlas.workspace.api.request.CreateWorkspaceRequest;
+import com.xuannie.devatlas.workspace.api.response.WorkspaceResponse;
+import com.xuannie.devatlas.workspace.common.exceptions.WorkspaceAlreadyExistsException;
+import com.xuannie.devatlas.workspace.common.exceptions.WorkspaceNotFoundException;
+import com.xuannie.devatlas.workspace.common.mapper.WorkspaceMapper;
+import com.xuannie.devatlas.workspace.common.utils.SlugUtils;
+import com.xuannie.devatlas.page.domain.model.Page;
+import com.xuannie.devatlas.workspace.domain.entity.Workspace;
+import com.xuannie.devatlas.workspace.domain.repository.WorkspaceRepository;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class WorkspaceServiceImpl implements WorkspaceService {
+
+    private final WorkspaceRepository workspaceRepository;
+    private final PageRepository pageRepository;
+
+    public WorkspaceServiceImpl(WorkspaceRepository workspaceRepository, PageRepository pageRepository) {
+        this.workspaceRepository = workspaceRepository;
+        this.pageRepository = pageRepository;
+    }
+
+    /**
+     * Retrieve all the workshops that belong to a User
+     * @return
+     */
+    @Override
+    public List<Workspace> listAllWorkspaces(Long ownerId) {
+        List<Workspace> workspaces = this.workspaceRepository.findAll(ownerId);
+
+        return workspaces;
+    }
+
+    @Override
+    public WorkspaceResponse getWorkspaceById(Long workspaceId) {
+        Workspace workspace = this.workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new WorkspaceNotFoundException(workspaceId));
+
+        return WorkspaceMapper.toResponse(workspace);
+    }
+
+    /**
+     * Ensure that every owner can only create one workspace with the same name
+     * A root page will be created as well when a workspace is created
+     * @param request
+     * @return
+     */
+    // Only need transaction if there are multiple writes, thats why create Page dont have
+    @Transactional
+    @Override
+    public WorkspaceResponse createWorkspace(CreateWorkspaceRequest request) {
+        // Extract the Owner ID from the Request
+        Long ownerId = 1L;
+        // Check if this owner has created this workspace before
+        if (this.workspaceRepository.isExistingWorkspaceNameByOwner(ownerId, request.getName())) {
+            throw new WorkspaceAlreadyExistsException(request.getName());
+        }
+
+        // Generate a unique slug for the workspace
+        String workspaceSlug;
+        workspaceSlug = SlugUtils.generateUniqueSlug(request.getName());
+        while (this.workspaceRepository.existsBySlug(workspaceSlug)) {
+            // Slug is not unique, try again
+            workspaceSlug = SlugUtils.generateUniqueSlug(request.getName());
+        }
+
+        // Map the request to a Workspace Domain Object and insert
+        Workspace workspace = WorkspaceMapper.toEntity(request, ownerId, workspaceSlug);
+        // useGeneratedKeys="true" place the id in the obejct we insert
+        this.workspaceRepository.insert(workspace);
+
+        // Root Pages have no IDs and Name always start off as Untitled
+        Page rootPage = Page.builder()
+                .name(WorkspaceConstants.ROOT_PAGE_NAME)
+                .workspaceId(workspace.getId())
+                .ownerId(ownerId)
+                .build();
+        this.pageRepository.insert(rootPage);
+        // Update the Parent of Root Pages to point at itself
+        rootPage.setParentId(rootPage.getId());
+        this.pageRepository.update(rootPage);
+
+        // Update the Workspace with RootPageId
+        workspace.setHomePageId(rootPage.getId());
+        this.workspaceRepository.update(workspace);
+
+        // Retrieve the actual object to return
+        Workspace createdWorkspace = this.workspaceRepository.findById(workspace.getId())
+                .orElseThrow(() -> new WorkspaceNotFoundException(workspace.getId()));
+        return WorkspaceMapper.toResponse(createdWorkspace);
+    }
+}

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xuannie.devatlas.page.domain.repository.PageRepository">
+
+    <!-- ResultMap tells MyBatis how to build a Java object out of a result-set row when it can't (or you don't want it to) guess -->
+    <resultMap id="PageResultMap" type="com.xuannie.devatlas.page.domain.model.Page">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="workspaceId" column="workspace_id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="ownerId" column="owner_id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="modifiedAt" column="modified_at"/>
+        <result property="archivedAt" column="archived_at"/>
+    </resultMap>
+
+    <!-- findById should not allowed archived pages to be found -->
+    <select id="findById" resultMap="PageResultMap">
+        SELECT *
+        FROM pages
+        WHERE id = #{pageId}
+        AND archived_at IS NULL;
+    </select>
+
+    <!-- getAllPages should not allowed archived pages to be found -->
+    <select id="getAllPages" resultMap="PageResultMap">
+        SELECT *
+        FROM pages
+        WHERE parent_id = #{parentId}
+        AND archived_at IS NULL;
+    </select>
+
+    <!-- Viewing archived pages should be done with specific functions -->
+    <select id="findArchivedById" resultMap="PageResultMap">
+        SELECT *
+        FROM pages
+        WHERE id = #{pageId}
+        AND archived_at IS NOT NULL;
+    </select>
+
+    <select id="getAllArchivedPages" resultMap="PageResultMap">
+        SELECT *
+        FROM pages
+        WHERE parent_id = #{parentId}
+        AND archived_at IS NOT NULL;
+    </select>
+
+    <select id="isExistingSiblingPageByParentPage" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM pages WHERE parent_id = #{parentId} AND name = #{pageName});
+    </select>
+
+    <!-- useGeneratedKeys="true" returns the generated primary key -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" parameterType="com.xuannie.devatlas.page.domain.model.Page">
+        INSERT INTO pages (name, workspace_id, parent_id, owner_id)
+        VALUES (#{name}, #{workspaceId}, #{parentId}, #{ownerId});
+    </insert>
+
+    <!-- Can update workspace_id since we can move pages eventually but not rootPage -->
+    <update id="update" useGeneratedKeys="true" parameterType="com.xuannie.devatlas.page.domain.model.Page">
+        UPDATE pages
+        <set>
+            <if test="name != null">name = #{name}, </if>
+            <if test="workspaceId != null">workspace_id = #{workspaceId}, </if>
+            <if test="parentId != null">parent_id = #{parentId}, </if>
+            <if test="archivedAt != null">archived_at = #{archivedAt}, </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM pages WHERE id = #{pageId}
+    </delete>
+</mapper>
