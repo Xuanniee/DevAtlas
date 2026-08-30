@@ -172,16 +172,16 @@ use case/service, domain object, MyBatis repository, SQL insert, and response.
 **Description:** Add page creation. The root page is provisioned automatically by workspace creation (Task 4), so this endpoint only ever creates child pages under an existing page (root or non-root) — `parentId` is required, not optional. The route is flat (`/api/pages`, no workspace prefix): `parentId` alone is enough to place the page in the tree, and the service derives `workspaceId` from the parent page's own `workspaceId` rather than trusting it from the client, so there's no separate "workspace slug" to keep in sync with the parent.
 
 **Acceptance criteria:**
-- [x] `POST /api/pages` creates a child page under the given `parentId` (root or non-root). Still can't complete a real request yet — see Task 4's still-open `PageRepository.insert`/`update` return-type bug (`Page insert(Page)`/`Page update(Page)` aren't valid MyBatis return types, same as `WorkspaceRepository.insert`).
-- [x] A request with no `parentId` is rejected with a validation error (root pages are never created here). Fixed (2026-08-30): `@NotBlank` removed from `CreatePageRequest.parentId`, only `@NotNull` remains.
-- [x] `workspaceId` on the new page is derived from the parent page's `workspaceId`, never taken from client input. Fixed (2026-08-30): `CreatePageRequest` no longer has a `workspaceId` field; `PageServiceImpl.createPage` looks up the parent and passes `parentPage.getWorkspaceId()` into `PageMapper.toEntity`.
-- [x] A `parentId` for a page that doesn't exist (or is archived) is rejected. Fixed (2026-08-30): `PageMapper.xml`'s `findById` now filters `archived_at IS NULL` (was briefly broken with a bad `archivedAt` column-name typo, then corrected), so both a nonexistent and an archived `parentId` fall into the same `PageNotFoundException` path.
+- [x] `POST /api/pages` creates a child page under the given `parentId` (root or non-root). Fixed and verified live (2026-08-30): `@RequestBody` added to `createPage`, `PageRepository.insert`/`update` return `void`. Real JSON `POST /api/pages` → `200`, correct `workspaceId` derived from parent, correct `parentId`.
+- [x] A request with no `parentId` is rejected with a validation error (root pages are never created here). Verified live (2026-08-30): `400`, `"parentId cannot be NULL since root pages are created at workspace level"`.
+- [x] `workspaceId` on the new page is derived from the parent page's `workspaceId`, never taken from client input. Verified live (2026-08-30).
+- [x] A `parentId` for a page that doesn't exist (or is archived) is rejected. Verified live (2026-08-30): nonexistent `parentId` → `404 Page with pageId 99999 is not found`. Archived case covered by the same `findById` filter (now `archived = FALSE`, previously `archived_at IS NULL` — filtering column changed when the module moved to a dedicated `archived` boolean, same exclusion behavior either way).
 - [x] New pages default their name to "Untitled" when no name is supplied.
 
 **Verification:**
-- [ ] Tests pass: page service and mapper integration tests.
-- [ ] Build succeeds: `./mvnw package` or `mvn package`
-- [ ] Manual check: create a child page under a workspace's root page, and a grandchild under that, through HTTP.
+- [ ] Tests pass: page service and mapper integration tests. Still no automated tests exist for the `page` module — everything verified here was via live HTTP checks, not `mvn test`.
+- [x] Build succeeds: `./mvnw package` or `mvn package`
+- [x] Manual check: create a child page under a workspace's root page, and a grandchild under that, through HTTP. Done (2026-08-30).
 
 **Dependencies:** Task 6
 
@@ -198,16 +198,19 @@ use case/service, domain object, MyBatis repository, SQL insert, and response.
 
 **Description:** Implement page read APIs for viewing a page and browsing the page tree one level at a time. These routes are flat (`/api/pages/{pageId}`, no workspace prefix) since `pageId` is already unique — they work identically whether the page is a workspace's root page or a nested child, so no branching is needed for root vs. child.
 
+Archived pages follow Confluence's model, not a plain soft-delete: "archived" means pulled out of normal navigation and search, not made inaccessible. Archived content stays fully readable through its own dedicated view — that's the whole point of archiving over deleting (see Task 9 for why). `PageRepository` already has `findByArchivedId`/`getAllArchivedPages` scaffolded for this; they need their own read endpoints alongside the normal ones.
+
 **Acceptance criteria:**
-- [x] `GET /api/pages/{pageId}` returns page details, whether the page is a root page or a child page.
-- [ ] `GET /api/pages/{pageId}/children` returns direct children. Blocked: `PageController.getAllPages` maps `@GetMapping("/api/pages/{pageId}/children")` but the method parameter is `@PathVariable Long parentId` — name doesn't match the URL template, throws `MissingPathVariableException` on every call.
-- [ ] Archived pages are excluded from normal child listings. Not done: `PageMapper.xml`'s `getAllPages` query has no `archived_at IS NULL` filter.
-- [ ] Page responses (create, get, list) include the page's own `id`. Not done: `PageResponse` has no `id` field, so a client can't reference a page it just created or listed.
+- [x] `GET /api/pages/{pageId}` returns page details, whether the page is a root page or a child page. Verified live (2026-08-30) against real MySQL.
+- [x] `GET /api/pages/{pageId}/children` returns direct children. Fixed and verified live (2026-08-30): `PageController.getAllPages` now uses `@PathVariable Long pageId` matching the URL template, calling `pageService.findAll(pageId)`. Returns the correct child list.
+- [x] Archived pages are excluded from normal child listings. Verified live (2026-08-30): after archiving a page, `GET .../children` on its former parent returns `[]`, and `GET /api/pages/{archivedId}` directly returns `404`.
+- [x] Page responses (create, get, list) include the page's own `id`. Fixed and verified live (2026-08-30): `PageResponse` constructor and `PageMapper.toResponse` both wired correctly — every response now includes a real `id`.
+- [x] `GET /api/pages/{pageId}/archived` (or equivalent) returns an archived page's details, and a corresponding endpoint lists archived children — a dedicated view, not just "excluded elsewhere." Fully done, verified live (2026-08-30): `GET /api/pages/archive`, `GET /api/pages/archive/{pageId}`, and `GET /api/pages/archive/{pageId}/children` all work correctly — `findAllArchivedPages`/`findAllArchived` naming now matches, and the archive-root listing correctly shows only the top of an archived subtree (e.g. archiving Child+Grandchild together shows only Child in the roots list).
 
 **Verification:**
-- [ ] Tests pass: focused API and mapper tests.
-- [ ] Build succeeds: `./mvnw package` or `mvn package`
-- [ ] Manual check: create a small page tree and browse it through HTTP.
+- [ ] Tests pass: focused API and mapper tests. Still no automated tests for the `page` module.
+- [x] Build succeeds: `./mvnw package` or `mvn package`
+- [x] Manual check: create a small page tree and browse it through HTTP. Done (2026-08-30) — create, get, list-children, archived-exclusion, and the full archived-view endpoint set all verified live.
 
 **Dependencies:** Task 7
 
@@ -223,10 +226,14 @@ use case/service, domain object, MyBatis repository, SQL insert, and response.
 
 **Description:** Add lifecycle operations for changing page title, moving a page within the hierarchy, and archiving a page. The move operation should prevent cycles.
 
+Archiving is not deletion — it's a reversible, "settled but not gone" state (the Confluence model): pulled out of normal navigation/search, but still fully intact and viewable through its own dedicated read path (Task 8), and restorable later. That's why it's a `POST` action on the resource, not a `DELETE` of it — nothing is actually being removed, so `DELETE`'s semantics (destroy the resource) don't fit. Archiving a page cascades to its entire subtree, so children are never left dangling under an invisible parent; restoring should be considered the same way (restoring a child whose ancestor is still archived needs a decision — restore top-down only, or pull the ancestor chain back too).
+
 **Acceptance criteria:**
-- [ ] `PATCH /api/pages/{pageId}/title` renames a page.
-- [ ] `POST /api/pages/{pageId}/move` moves a page to another parent or root.
-- [ ] `DELETE /api/pages/{pageId}` archives a page without hard deletion.
+- [x] `PATCH /api/pages/{pageId}/title` renames a page. Verified live (2026-08-30).
+- [x] `POST /api/pages/{pageId}/move` moves a page to another parent or root, **and prevents cycles**. Fixed and verified live (2026-08-30): `MoveUtils.wouldCreatePageMoveCycles` walks the full ancestor chain from the new parent (checking the new parent itself first, then stepping up via `parentId` until it hits `null`), throwing `CyclicPageMoveException` (409) if it ever reaches the page being moved. Confirmed live: moving under a root page now works with no NPE; a 3-level cycle attempt and a self-parent attempt are both correctly rejected with `409`; a normal valid move still succeeds.
+- [x] `POST /api/pages/{pageId}/archive` archives a page without hard deletion (changed from `DELETE /api/pages/{pageId}`). Verified live.
+- [x] Archiving a page cascades: all of its descendants are archived too, not just the page itself. Verified live across a 3-level tree (root → child → grandchild), all three correctly archived with `archived_at` timestamps.
+- [x] `POST /api/pages/{pageId}/restore` (or equivalent) reverses an archive. Fixed and verified live (2026-08-30): `currPage.setArchivedAt(null)` added right after `resetArchivedDatetime`, so the in-memory object and the database now agree. Confirmed: response shows `"archivedAt":null` and the raw DB row shows `archived_at = NULL` for the same request.
 
 **Verification:**
 - [ ] Tests pass: hierarchy policy tests and persistence tests.

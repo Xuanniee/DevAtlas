@@ -22,6 +22,7 @@ public class PageMapper {
 
     public static PageResponse toResponse(Page page) {
         return new PageResponse(
+            page.getId(),
             page.getName(),
             page.getWorkspaceId(),
             page.getParentId(),

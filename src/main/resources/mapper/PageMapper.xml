@@ -11,6 +11,7 @@
         <result property="workspaceId" column="workspace_id"/>
         <result property="parentId" column="parent_id"/>
         <result property="ownerId" column="owner_id"/>
+        <result property="archived" column="archived"/>
         <result property="createdAt" column="created_at"/>
         <result property="modifiedAt" column="modified_at"/>
         <result property="archivedAt" column="archived_at"/>
@@ -21,15 +22,15 @@
         SELECT *
         FROM pages
         WHERE id = #{pageId}
-        AND archived_at IS NULL;
+        AND archived = FALSE;
     </select>
 
     <!-- getAllPages should not allowed archived pages to be found -->
-    <select id="getAllPages" resultMap="PageResultMap">
+    <select id="findAll" resultMap="PageResultMap">
         SELECT *
         FROM pages
         WHERE parent_id = #{parentId}
-        AND archived_at IS NULL;
+        AND archived = FALSE;
     </select>
 
     <!-- Viewing archived pages should be done with specific functions -->
@@ -37,14 +38,7 @@
         SELECT *
         FROM pages
         WHERE id = #{pageId}
-        AND archived_at IS NOT NULL;
-    </select>
-
-    <select id="getAllArchivedPages" resultMap="PageResultMap">
-        SELECT *
-        FROM pages
-        WHERE parent_id = #{parentId}
-        AND archived_at IS NOT NULL;
+        AND archived = TRUE;
     </select>
 
     <select id="isExistingSiblingPageByParentPage" resultType="boolean">
@@ -65,6 +59,7 @@
             <if test="workspaceId != null">workspace_id = #{workspaceId}, </if>
             <if test="parentId != null">parent_id = #{parentId}, </if>
             <if test="archivedAt != null">archived_at = #{archivedAt}, </if>
+            <if test="archived != null">archived = #{archived}, </if>
         </set>
         WHERE id = #{id}
     </update>
@@ -72,4 +67,34 @@
     <delete id="delete">
         DELETE FROM pages WHERE id = #{pageId}
     </delete>
+
+    <!-- An Archive Root is any page that has been archived, and has null as a parent or the parent isnt archived -->
+    <select id="findAllArchivedPages" resultMap="PageResultMap">
+        SELECT p.*
+        FROM pages p
+        LEFT JOIN pages parent
+        ON p.parent_id = parent.id
+        WHERE p.archived = TRUE
+        AND (p.parent_id IS NULL OR parent.archived = FALSE);
+    </select>
+
+    <select id="findByArchivedId" resultMap="PageResultMap">
+        SELECT *
+        FROM pages
+        WHERE id = #{pageId}
+        AND archived = TRUE;
+    </select>
+
+    <select id="findAllArchivedChildren" resultMap="PageResultMap">
+        SELECT *
+        FROM pages
+        WHERE parent_id = #{pageId}
+        AND archived = TRUE;
+    </select>
+
+    <update id="resetArchivedDatetime" parameterType="Long">
+        UPDATE pages
+        SET archived_at = null
+        WHERE id = #{pageId};
+    </update>
 </mapper>

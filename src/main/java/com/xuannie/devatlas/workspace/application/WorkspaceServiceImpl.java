@@ -77,15 +77,13 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         this.workspaceRepository.insert(workspace);
 
         // Root Pages have no IDs and Name always start off as Untitled
+        // RootPages's ParentID will be null
         Page rootPage = Page.builder()
                 .name(WorkspaceConstants.ROOT_PAGE_NAME)
                 .workspaceId(workspace.getId())
                 .ownerId(ownerId)
                 .build();
         this.pageRepository.insert(rootPage);
-        // Update the Parent of Root Pages to point at itself
-        rootPage.setParentId(rootPage.getId());
-        this.pageRepository.update(rootPage);
 
         // Update the Workspace with RootPageId
         workspace.setHomePageId(rootPage.getId());

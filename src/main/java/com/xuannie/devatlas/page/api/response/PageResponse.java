@@ -16,6 +16,7 @@ public class PageResponse {
     private LocalDateTime archivedAt;
 
     public PageResponse(
+            Long id,
             String name,
             Long workspaceId,
             Long parentId,
@@ -24,6 +25,7 @@ public class PageResponse {
             LocalDateTime modifiedAt,
             LocalDateTime archivedAt
     ) {
+        this.id = id;
         this.name = name;
         this.workspaceId = workspaceId;
         this.parentId = parentId;

@@ -12,7 +12,7 @@ public interface PageRepository {
 
     boolean isExistingSiblingPageByParentPage(Long parentId, String pageName);
 
-    List<Page> getAllPages(Long parentId);
+    List<Page> findAll(Long parentId);
 
     void insert(Page page);
 
@@ -22,5 +22,9 @@ public interface PageRepository {
 
     Optional<Page> findByArchivedId(Long archivedPageId);
 
-    List<Page> getAllArchivedPages(Long parentId);
+    List<Page> findAllArchivedPages();
+
+    List<Page> findAllArchivedChildren(Long pageId);
+
+    void resetArchivedDatetime(Long pageId);
 }

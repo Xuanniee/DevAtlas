@@ -1,22 +1,23 @@
 -- Workspaces must exist first since pages have a FK reference to workspaces
 CREATE TABLE pages (
-                       id           BIGINT          AUTO_INCREMENT NOT NULL,
-                       workspace_id BIGINT          NOT NULL,
-                       parent_id    BIGINT,                                             -- Nullable as first page has no parent
-                       name         VARCHAR(256)    NOT NULL,
-                       owner_id     BIGINT          NOT NULL,
-                       created_at   DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-                       modified_at  DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
-       ON UPDATE CURRENT_TIMESTAMP(3),
-                       archived_at  DATETIME(3),
+    id           BIGINT          AUTO_INCREMENT NOT NULL,
+    workspace_id BIGINT          NOT NULL,
+    parent_id    BIGINT,                                             -- Nullable as first page has no parent
+    name         VARCHAR(256)    NOT NULL,
+    content      LONGTEXT                ,
+    owner_id     BIGINT          NOT NULL,
+    archived     BOOLEAN         NOT NULL DEFAULT  FALSE,           -- Pages are never archived by default
+    created_at   DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    modified_at  DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    archived_at  DATETIME(3),
 
-                       CONSTRAINT pk_pages PRIMARY KEY (id),
-                       CONSTRAINT fk_pages_workspace
-                           FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
-                       CONSTRAINT fk_pages_parent
-                           FOREIGN KEY (parent_id) REFERENCES pages(id),
-                       CONSTRAINT fk_pages_owner
-                           FOREIGN KEY (owner_id) REFERENCES users(id)
+    CONSTRAINT pk_pages PRIMARY KEY (id),
+    CONSTRAINT fk_pages_workspace
+       FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
+    CONSTRAINT fk_pages_parent
+       FOREIGN KEY (parent_id) REFERENCES pages(id),
+    CONSTRAINT fk_pages_owner
+       FOREIGN KEY (owner_id) REFERENCES users(id)
 ) ENGINE = InnoDB;
 
 -- Need to alter workspaces separately since they have FK to pages which initialised later
