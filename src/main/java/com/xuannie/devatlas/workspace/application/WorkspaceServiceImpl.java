@@ -1,6 +1,6 @@
 package com.xuannie.devatlas.workspace.application;
 
-import com.xuannie.devatlas.page.common.constants.WorkspaceConstants;
+import com.xuannie.devatlas.page.common.constants.PageConstants;
 import com.xuannie.devatlas.page.domain.repository.PageRepository;
 import com.xuannie.devatlas.workspace.api.request.CreateWorkspaceRequest;
 import com.xuannie.devatlas.workspace.api.response.WorkspaceResponse;
@@ -13,19 +13,16 @@ import com.xuannie.devatlas.workspace.domain.entity.Workspace;
 import com.xuannie.devatlas.workspace.domain.repository.WorkspaceRepository;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkspaceServiceImpl implements WorkspaceService {
-
-    private final WorkspaceRepository workspaceRepository;
-    private final PageRepository pageRepository;
-
-    public WorkspaceServiceImpl(WorkspaceRepository workspaceRepository, PageRepository pageRepository) {
-        this.workspaceRepository = workspaceRepository;
-        this.pageRepository = pageRepository;
-    }
+    @Autowired
+    private WorkspaceRepository workspaceRepository;
+    @Autowired
+    private PageRepository pageRepository;
 
     /**
      * Retrieve all the workshops that belong to a User
@@ -79,7 +76,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         // Root Pages have no IDs and Name always start off as Untitled
         // RootPages's ParentID will be null
         Page rootPage = Page.builder()
-                .name(WorkspaceConstants.ROOT_PAGE_NAME)
+                .name(PageConstants.ROOT_PAGE_NAME)
                 .workspaceId(workspace.getId())
                 .ownerId(ownerId)
                 .build();

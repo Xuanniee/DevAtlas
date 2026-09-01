@@ -11,6 +11,7 @@
         <result property="workspaceId" column="workspace_id"/>
         <result property="parentId" column="parent_id"/>
         <result property="ownerId" column="owner_id"/>
+        <result property="content" column="content"/>
         <result property="archived" column="archived"/>
         <result property="createdAt" column="created_at"/>
         <result property="modifiedAt" column="modified_at"/>
@@ -47,8 +48,8 @@
 
     <!-- useGeneratedKeys="true" returns the generated primary key -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id" parameterType="com.xuannie.devatlas.page.domain.model.Page">
-        INSERT INTO pages (name, workspace_id, parent_id, owner_id)
-        VALUES (#{name}, #{workspaceId}, #{parentId}, #{ownerId});
+        INSERT INTO pages (name, workspace_id, parent_id, owner_id, content)
+        VALUES (#{name}, #{workspaceId}, #{parentId}, #{ownerId}, #{content});
     </insert>
 
     <!-- Can update workspace_id since we can move pages eventually but not rootPage -->
@@ -59,6 +60,8 @@
             <if test="workspaceId != null">workspace_id = #{workspaceId}, </if>
             <if test="parentId != null">parent_id = #{parentId}, </if>
             <if test="archivedAt != null">archived_at = #{archivedAt}, </if>
+            <if test="content != null">content = #{content}, </if>
+            <if test="ownerId != null">owner_id = #{ownerId}, </if>
             <if test="archived != null">archived = #{archived}, </if>
         </set>
         WHERE id = #{id}

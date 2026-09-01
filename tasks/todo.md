@@ -255,14 +255,14 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 **Description:** Record page content changes as immutable revisions. Keep this simple: page title/content updates create revisions, and users can list revision metadata.
 
 **Acceptance criteria:**
-- [ ] Page content can be updated.
-- [ ] Updating content creates a page revision.
-- [ ] Revision metadata can be listed for a page.
+- [x] Page content can be updated. Fixed and verified live (2026-09-01): content at creation works, and a content-only `PATCH /api/pages/{pageId}` (no `name` required) correctly updates just the content, confirmed against the raw database.
+- [x] Updating content creates a page revision. Fixed and verified live (2026-09-01): two sequential content updates produced two correctly-numbered revisions (1, then 2) with the right content and update notes, confirmed in the `revisions` table directly.
+- [x] Revision metadata can be listed for a page. Verified live (2026-09-01): `GET /api/revisions/v1/{pageId}/findAll` returns the full, correctly-ordered revision history.
 
 **Verification:**
-- [ ] Tests pass: revision service and mapper tests.
-- [ ] Build succeeds: `./mvnw package` or `mvn package`
-- [ ] Manual check: update a page twice and verify two revisions exist.
+- [ ] Tests pass: revision service and mapper tests. No automated tests exist for the revision module — everything verified here was via live HTTP + direct DB checks.
+- [x] Build succeeds: `./mvnw package` or `mvn package`
+- [x] Manual check: update a page twice and verify two revisions exist. Done (2026-09-01) — confirmed live against real MySQL.
 
 **Dependencies:** Task 9
 

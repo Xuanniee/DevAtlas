@@ -1,7 +1,11 @@
-package com.xuannie.devatlas.page.application;
+package com.xuannie.devatlas.page.application.impl;
 
 import com.xuannie.devatlas.page.api.request.*;
 import com.xuannie.devatlas.page.api.response.PageResponse;
+import com.xuannie.devatlas.page.application.PageRevisionService;
+import com.xuannie.devatlas.page.application.PageService;
+import com.xuannie.devatlas.page.common.command.*;
+import com.xuannie.devatlas.page.common.constants.PageConstants;
 import com.xuannie.devatlas.page.common.exceptions.ArchivedPageNotFoundException;
 import com.xuannie.devatlas.page.common.exceptions.CyclicPageMoveException;
 import com.xuannie.devatlas.page.common.exceptions.PageNotFoundException;
@@ -11,51 +15,47 @@ import com.xuannie.devatlas.page.common.utils.ArchiveUtils;
 import com.xuannie.devatlas.page.common.utils.MoveUtils;
 import com.xuannie.devatlas.page.domain.model.Page;
 import com.xuannie.devatlas.page.domain.repository.PageRepository;
+import com.xuannie.devatlas.page.domain.repository.PageRevisionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 
 @Service
 public class PageServiceImpl implements PageService {
-    private final PageRepository pageRepository;
-
-    public PageServiceImpl(PageRepository pageRepository) {
-        this.pageRepository = pageRepository;
-    }
+    @Autowired
+    private PageRepository pageRepository;
+    @Autowired
+    private PageRevisionService pageRevisionService;
 
     @Override
-    public PageResponse createPage(CreatePageRequest request) {
-        // Check if Page Name is empty
+    public PageResponse createPage(CreatePageCommand command) {
+        // Determine Page Name
         String pageName = "Untitled";
-        if (request.getName() != null) {
-            // Update name
-            pageName = request.getName();
+        if (command.name() != null) {
+            pageName = command.name();
         }
-
-        // Check if the page name is already existing as cannot be duplicated
-        if (!pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(request.getParentId(), pageName)) {
-            throw new RootPageAlreadyExistsException(request.getName());
+        if (!pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(command.parentId(), pageName)) {
+            throw new RootPageAlreadyExistsException(command.name());
         }
-
-        // Keep on getting the next Number if existing
         int counter = 1;
-        while (pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(request.getParentId(), pageName)) {
+        while (pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(command.parentId(), pageName)) {
             // Means already has an untitled page
             pageName = "Untitled " + counter;
             counter += 1;
         }
 
         // Derive the Workspace from the Parent/Root Page
-        Page parentPage = this.pageRepository.findById(request.getParentId())
-                .orElseThrow(() -> new PageNotFoundException(request.getParentId()));
+        Page parentPage = this.pageRepository.findById(command.parentId())
+                .orElseThrow(() -> new PageNotFoundException(command.parentId()));
 
         // PageId used in URL for pages instead of slugs
-        Page page = PageMapper.toEntity(request, parentPage.getWorkspaceId());
+        Page page = PageMapper.toEntity(command, parentPage.getWorkspaceId());
         page.setName(pageName);
+
 
         this.pageRepository.insert(page);
         return PageMapper.toResponse(page);
@@ -65,25 +65,26 @@ public class PageServiceImpl implements PageService {
      * Retrieve all the Children Pages of a Parent Page.
      *
      * SQL use index instead of storing foreign reference to denormalise data
-     * @param parentId
+     * @param query
      * @return
      */
     @Override
-    public List<PageResponse> findAll(Long parentId) {
-        List<Page> childrenPages = this.pageRepository.findAll(parentId);
+    public List<PageResponse> findAll(RetrievePageQuery query) {
+        // The page is the parent
+        List<Page> childrenPages = this.pageRepository.findAll(query.pageId());
 
         return PageMapper.toResponseList(childrenPages);
     }
 
     /**
      * Get a single Page and their details
-     * @param pageId
+     * @param query
      * @return
      */
     @Override
-    public PageResponse getPageById(Long pageId) {
-        Page page = this.pageRepository.findById(pageId)
-                .orElseThrow(() -> new PageNotFoundException(pageId));
+    public PageResponse getPageById(RetrievePageQuery query) {
+        Page page = this.pageRepository.findById(query.pageId())
+                .orElseThrow(() -> new PageNotFoundException(query.pageId()));
 
         return PageMapper.toResponse(page);
     }
@@ -118,21 +119,33 @@ public class PageServiceImpl implements PageService {
         return PageMapper.toResponse(page);
     }
 
+    @Transactional
     @Override
-    public PageResponse update(Long pageId, UpdatePageRequest request) {
+    public PageResponse update(UpdatePageCommand command) {
         // Create an UpdatePage Object and populate fields from the request
-        Page updatePage = this.pageRepository.findById(pageId)
-                .orElseThrow(() -> new PageNotFoundException(pageId));
+        Page updatePage = this.pageRepository.findById(command.pageId())
+                .orElseThrow(() -> new PageNotFoundException(command.pageId()));
 
-        if (request.getName() != null) {
-            updatePage.setName(request.getName());
+        if (command.name() != null) {
+            updatePage.setName(command.name());
+        }
+        if (command.ownerId() != null) {
+            updatePage.setOwnerId(command.ownerId());
+        }
+        if (command.content() != null) {
+            updatePage.setContent(command.content());
         }
 
-        if (request.getOwnerId() != null) {
-            updatePage.setOwnerId(request.getOwnerId());
-        }
-
+        // Update Page, then create revision
         this.pageRepository.update(updatePage);
+        CreatePageRevisionCommand revisionCommand = PageRevisionCommandBuilder.from(new CreatePageRevisionRequest(
+                updatePage.getId(),
+                updatePage.getName(),
+                updatePage.getContent(),
+                command.updateNote(),
+                updatePage.getOwnerId()
+        ));
+        this.pageRevisionService.create(revisionCommand);
         return PageMapper.toResponse(updatePage);
     }
 

@@ -3,6 +3,10 @@ package com.xuannie.devatlas.page.adapter;
 import com.xuannie.devatlas.page.api.request.*;
 import com.xuannie.devatlas.page.api.response.PageResponse;
 import com.xuannie.devatlas.page.application.PageService;
+import com.xuannie.devatlas.page.common.command.CreatePageCommand;
+import com.xuannie.devatlas.page.common.command.PageCommandBuilder;
+import com.xuannie.devatlas.page.common.command.RetrievePageQuery;
+import com.xuannie.devatlas.page.common.command.UpdatePageCommand;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,19 +25,23 @@ public class PageController {
     // Refers to creating a Child Page under this Page
     @PostMapping()
     public PageResponse createPage(@Valid @RequestBody CreatePageRequest request) {
-        return pageService.createPage(request);
+        CreatePageCommand command = PageCommandBuilder.from(request);
+        return pageService.createPage(command);
+        // return ResponseAssembler.assemble();
     }
 
     // Get a Page Details
     @GetMapping("/{pageId}")
     public PageResponse getPage(@PathVariable Long pageId) {
-        return pageService.getPageById(pageId);
+        RetrievePageQuery query = PageCommandBuilder.from(pageId);
+        return pageService.getPageById(query);
     }
 
     // Get all Child Pages under a Page
     @GetMapping("/{pageId}/children")
     public List<PageResponse> getAllPages(@PathVariable Long pageId) {
-        return pageService.findAll(pageId);
+        RetrievePageQuery query = PageCommandBuilder.from(pageId);
+        return pageService.findAll(query);
     }
 
     // Move a Page from one Parent to another (Can be same or different workspace)
@@ -45,12 +53,13 @@ public class PageController {
         return pageService.movePage(pageId, request);
     }
 
-    @PatchMapping("/{pageId}/title")
+    @PatchMapping("/{pageId}")
     public PageResponse update(
             @PathVariable Long pageId,
             @Valid @RequestBody UpdatePageRequest request
     ) {
-        return pageService.update(pageId, request);
+        UpdatePageCommand command = PageCommandBuilder.from(pageId, request);
+        return pageService.update(command);
     }
 
     // archive or unarchive endpoint

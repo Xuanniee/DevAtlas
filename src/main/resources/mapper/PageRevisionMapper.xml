@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xuannie.devatlas.page.domain.repository.PageRevisionRepository">
+
+    <!-- ResultMap tells MyBatis how to build a Java object out of a result-set row when it can't (or you don't want it to) guess -->
+    <resultMap id="PageRevisionResultMap" type="com.xuannie.devatlas.page.domain.model.PageRevision">
+        <id property="id" column="id"/>
+        <result property="pageId" column="page_id"/>
+        <result property="revisionNumber" column="revision_number"/>
+        <result property="name" column="name"/>
+        <result property="content" column="content"/>
+        <result property="note" column="note"/>
+        <result property="editedBy" column="edited_by"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="create" useGeneratedKeys="true" keyProperty="id" parameterType="com.xuannie.devatlas.page.domain.model.PageRevision">
+        INSERT INTO revisions (page_id, revision_number, name, content, note, edited_by)
+        VALUES (#{pageId}, #{revisionNumber}, #{name}, #{content}, #{note}, #{editedBy});
+    </insert>
+
+    <select id="getNextRevision" resultType="int">
+        SELECT COALESCE(MAX(revision_number), 0) + 1
+        FROM revisions
+        WHERE page_id = #{pageId};
+    </select>
+
+    <select id="findAllByPageId" resultType="com.xuannie.devatlas.page.domain.model.PageRevision">
+        SELECT *
+        FROM revisions
+        WHERE page_id = #{pageId};
+    </select>
+
+
+</mapper>

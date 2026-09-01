@@ -2,6 +2,7 @@ package com.xuannie.devatlas.page.common.mapper;
 
 import com.xuannie.devatlas.page.api.request.CreatePageRequest;
 import com.xuannie.devatlas.page.api.response.PageResponse;
+import com.xuannie.devatlas.page.common.command.CreatePageCommand;
 import com.xuannie.devatlas.page.domain.model.Page;
 
 import java.util.ArrayList;
@@ -10,13 +11,14 @@ import java.util.List;
 public class PageMapper {
     public PageMapper() {}
 
-    public static Page toEntity(CreatePageRequest request, Long workspaceId) {
+    public static Page toEntity(CreatePageCommand command, Long workspaceId) {
         // Use builder to set attributes and let DB insert timestamps themselves
         return Page.builder()
-                .name(request.getName())
+                .name(command.name())
                 .workspaceId(workspaceId)
-                .parentId(request.getParentId())
-                .ownerId(request.getOwnerId())
+                .parentId(command.parentId())
+                .ownerId(command.ownerId())
+                .content(command.content())
                 .build();
     }
 
@@ -27,6 +29,7 @@ public class PageMapper {
             page.getWorkspaceId(),
             page.getParentId(),
             page.getOwnerId(),
+            page.getContent(),
             page.getCreatedAt(),
             page.getModifiedAt(),
             page.getArchivedAt()

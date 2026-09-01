@@ -2,20 +2,22 @@ package com.xuannie.devatlas.page.application;
 
 import com.xuannie.devatlas.page.api.request.*;
 import com.xuannie.devatlas.page.api.response.PageResponse;
-import com.xuannie.devatlas.page.domain.model.Page;
+import com.xuannie.devatlas.page.common.command.CreatePageCommand;
+import com.xuannie.devatlas.page.common.command.RetrievePageQuery;
+import com.xuannie.devatlas.page.common.command.UpdatePageCommand;
 
 import java.util.List;
 
 public interface PageService {
-    PageResponse createPage(CreatePageRequest request);
+    PageResponse createPage(CreatePageCommand command);
 
-    List<PageResponse> findAll(Long parentId);
+    List<PageResponse> findAll(RetrievePageQuery query);
 
-    PageResponse getPageById(Long pageId);
+    PageResponse getPageById(RetrievePageQuery query);
 
     PageResponse movePage(Long pageId, MovePageRequest request);
 
-    PageResponse update(Long pageId, UpdatePageRequest request);
+    PageResponse update(UpdatePageCommand command);
 
     PageResponse archive(Long pageId, ArchivePageRequest request);
 
