@@ -4,8 +4,8 @@ import com.xuannie.devatlas.page.api.request.*;
 import com.xuannie.devatlas.page.api.response.PageResponse;
 import com.xuannie.devatlas.page.application.PageService;
 import com.xuannie.devatlas.page.common.command.CreatePageCommand;
+import com.xuannie.devatlas.page.common.command.MoveOrRetrievePageCommand;
 import com.xuannie.devatlas.page.common.command.PageCommandBuilder;
-import com.xuannie.devatlas.page.common.command.RetrievePageQuery;
 import com.xuannie.devatlas.page.common.command.UpdatePageCommand;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -33,15 +33,15 @@ public class PageController {
     // Get a Page Details
     @GetMapping("/{pageId}")
     public PageResponse getPage(@PathVariable Long pageId) {
-        RetrievePageQuery query = PageCommandBuilder.from(pageId);
-        return pageService.getPageById(query);
+        MoveOrRetrievePageCommand command = PageCommandBuilder.from(pageId);
+        return pageService.getPageById(command);
     }
 
     // Get all Child Pages under a Page
     @GetMapping("/{pageId}/children")
     public List<PageResponse> getAllPages(@PathVariable Long pageId) {
-        RetrievePageQuery query = PageCommandBuilder.from(pageId);
-        return pageService.findAll(query);
+        MoveOrRetrievePageCommand command = PageCommandBuilder.from(pageId);
+        return pageService.findAll(command);
     }
 
     // Move a Page from one Parent to another (Can be same or different workspace)

@@ -1,7 +1,6 @@
 package com.xuannie.devatlas.page.common.command;
 
 import com.xuannie.devatlas.page.api.request.CreatePageRequest;
-import com.xuannie.devatlas.page.api.request.CreatePageRevisionRequest;
 import com.xuannie.devatlas.page.api.request.UpdatePageRequest;
 
 public final class PageCommandBuilder {
@@ -26,7 +25,8 @@ public final class PageCommandBuilder {
         );
     }
 
-    public static RetrievePageQuery from(Long pageId) {
-        return new RetrievePageQuery(pageId);
+    public static MoveOrRetrievePageCommand from(Long pageId) {
+        return new MoveOrRetrievePageCommand(pageId);
     }
+
 }

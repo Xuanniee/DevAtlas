@@ -65,26 +65,26 @@ public class PageServiceImpl implements PageService {
      * Retrieve all the Children Pages of a Parent Page.
      *
      * SQL use index instead of storing foreign reference to denormalise data
-     * @param query
+     * @param command
      * @return
      */
     @Override
-    public List<PageResponse> findAll(RetrievePageQuery query) {
+    public List<PageResponse> findAll(MoveOrRetrievePageCommand command) {
         // The page is the parent
-        List<Page> childrenPages = this.pageRepository.findAll(query.pageId());
+        List<Page> childrenPages = this.pageRepository.findAll(command.pageId());
 
         return PageMapper.toResponseList(childrenPages);
     }
 
     /**
      * Get a single Page and their details
-     * @param query
+     * @param command
      * @return
      */
     @Override
-    public PageResponse getPageById(RetrievePageQuery query) {
-        Page page = this.pageRepository.findById(query.pageId())
-                .orElseThrow(() -> new PageNotFoundException(query.pageId()));
+    public PageResponse getPageById(MoveOrRetrievePageCommand command) {
+        Page page = this.pageRepository.findById(command.pageId())
+                .orElseThrow(() -> new PageNotFoundException(command.pageId()));
 
         return PageMapper.toResponse(page);
     }

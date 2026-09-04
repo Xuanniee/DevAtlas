@@ -2,6 +2,7 @@ CREATE TABLE users (
     id              BIGINT          AUTO_INCREMENT NOT NULL,
     name            VARCHAR(256)    NOT NULL,
     email           VARCHAR(256)    NOT NULL,
+    password_hash   VARCHAR(255)    NOT NULL,                                   -- Hash of user password
     created_at      DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),      -- Current Datetime when created
     modified_at     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3)       -- Current Datetime when created and updated
         ON UPDATE CURRENT_TIMESTAMP(3),

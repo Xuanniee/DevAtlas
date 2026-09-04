@@ -3,7 +3,7 @@ package com.xuannie.devatlas.page.application;
 import com.xuannie.devatlas.page.api.request.*;
 import com.xuannie.devatlas.page.api.response.PageResponse;
 import com.xuannie.devatlas.page.common.command.CreatePageCommand;
-import com.xuannie.devatlas.page.common.command.RetrievePageQuery;
+import com.xuannie.devatlas.page.common.command.MoveOrRetrievePageCommand;
 import com.xuannie.devatlas.page.common.command.UpdatePageCommand;
 
 import java.util.List;
@@ -11,9 +11,9 @@ import java.util.List;
 public interface PageService {
     PageResponse createPage(CreatePageCommand command);
 
-    List<PageResponse> findAll(RetrievePageQuery query);
+    List<PageResponse> findAll(MoveOrRetrievePageCommand command);
 
-    PageResponse getPageById(RetrievePageQuery query);
+    PageResponse getPageById(MoveOrRetrievePageCommand command);
 
     PageResponse movePage(Long pageId, MovePageRequest request);
 
