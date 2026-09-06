@@ -10,16 +10,19 @@ import java.time.LocalDateTime;
 @Getter
 @Builder
 public class User {
-    private String id;
+    private Long id;
     private String name;
     private String email;
     private String passwordHash;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
 
-    public User(String name, String email, String passwordHash) {
+    public User(Long id, String name, String email, String passwordHash, LocalDateTime createdAt, LocalDateTime modifiedAt) {
+        this.id = id;
         this.name = name;
         this.email = email;
         this.passwordHash = passwordHash;
+        this.createdAt = createdAt;
+        this.modifiedAt = modifiedAt;
     }
 }

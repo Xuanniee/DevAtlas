@@ -1,5 +1,6 @@
 package com.xuannie.devatlas.page.application.impl;
 
+import com.xuannie.devatlas.common.utils.PatchUtils;
 import com.xuannie.devatlas.page.api.request.*;
 import com.xuannie.devatlas.page.api.response.PageResponse;
 import com.xuannie.devatlas.page.application.PageRevisionService;
@@ -38,18 +39,18 @@ public class PageServiceImpl implements PageService {
         if (command.name() != null) {
             pageName = command.name();
         }
-        if (!pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(command.parentId(), pageName)) {
+        if (!pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(command.ownerId(), command.parentId(), pageName)) {
             throw new RootPageAlreadyExistsException(command.name());
         }
         int counter = 1;
-        while (pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(command.parentId(), pageName)) {
+        while (pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(command.ownerId(), command.parentId(), pageName)) {
             // Means already has an untitled page
             pageName = "Untitled " + counter;
             counter += 1;
         }
 
         // Derive the Workspace from the Parent/Root Page
-        Page parentPage = this.pageRepository.findById(command.parentId())
+        Page parentPage = this.pageRepository.findById(command.ownerId(), command.parentId())
                 .orElseThrow(() -> new PageNotFoundException(command.parentId()));
 
         // PageId used in URL for pages instead of slugs
@@ -57,7 +58,7 @@ public class PageServiceImpl implements PageService {
         page.setName(pageName);
 
 
-        this.pageRepository.insert(page);
+        this.pageRepository.insert(command.ownerId(), page);
         return PageMapper.toResponse(page);
     }
 
@@ -69,9 +70,9 @@ public class PageServiceImpl implements PageService {
      * @return
      */
     @Override
-    public List<PageResponse> findAll(MoveOrRetrievePageCommand command) {
+    public List<PageResponse> findAll(RetrievePageQuery command) {
         // The page is the parent
-        List<Page> childrenPages = this.pageRepository.findAll(command.pageId());
+        List<Page> childrenPages = this.pageRepository.findAll(command.ownerId(), command.pageId());
 
         return PageMapper.toResponseList(childrenPages);
     }
@@ -82,28 +83,28 @@ public class PageServiceImpl implements PageService {
      * @return
      */
     @Override
-    public PageResponse getPageById(MoveOrRetrievePageCommand command) {
-        Page page = this.pageRepository.findById(command.pageId())
+    public PageResponse getPageById(RetrievePageQuery command) {
+        Page page = this.pageRepository.findById(command.ownerId(), command.pageId())
                 .orElseThrow(() -> new PageNotFoundException(command.pageId()));
 
         return PageMapper.toResponse(page);
     }
 
     @Override
-    public PageResponse movePage(Long pageId, MovePageRequest request) {
+    public PageResponse movePage(MovePageCommand command) {
         // Retrieve the target page
-        Page page = this.pageRepository.findById(pageId)
-                .orElseThrow(() -> new PageNotFoundException(pageId));
+        Page page = this.pageRepository.findById(command.ownerId(), command.currentPageId())
+                .orElseThrow(() -> new PageNotFoundException(command.currentPageId()));
 
         // Retrieve the New Parent Page
-        Long newParentId = request.getParentId();
-        Page newParentPage = this.pageRepository.findById(newParentId)
+        Long newParentId = command.targetPageId();
+        Page newParentPage = this.pageRepository.findById(command.ownerId(), newParentId)
                 .orElseThrow(() -> new PageNotFoundException(newParentId));
 
         // Check if there are cycles caused by moving this page to the new parent
-        if (MoveUtils.wouldCreatePageMoveCycles(pageId, newParentPage, this.pageRepository)) {
+        if (MoveUtils.wouldCreatePageMoveCycles(command.ownerId(), command.currentPageId(), newParentPage, this.pageRepository)) {
             // A cycle will form
-            throw new CyclicPageMoveException(pageId, newParentId);
+            throw new CyclicPageMoveException(command.currentPageId(), newParentId);
         }
 
         // Check if same or different workspace
@@ -115,7 +116,7 @@ public class PageServiceImpl implements PageService {
         page.setParentId(newParentId);
 
         // Update the page
-        this.pageRepository.update(page);
+        this.pageRepository.update(command.ownerId(), page);
         return PageMapper.toResponse(page);
     }
 
@@ -123,22 +124,25 @@ public class PageServiceImpl implements PageService {
     @Override
     public PageResponse update(UpdatePageCommand command) {
         // Create an UpdatePage Object and populate fields from the request
-        Page updatePage = this.pageRepository.findById(command.pageId())
+        Page updatePage = this.pageRepository.findById(command.ownerId(), command.pageId())
                 .orElseThrow(() -> new PageNotFoundException(command.pageId()));
 
-        if (command.name() != null) {
-            updatePage.setName(command.name());
-        }
-        if (command.ownerId() != null) {
-            updatePage.setOwnerId(command.ownerId());
-        }
-        if (command.content() != null) {
-            updatePage.setContent(command.content());
-        }
+        PatchUtils.ifPresent(command.name(), updatePage::setName);
+        PatchUtils.ifPresent(command.ownerId(), updatePage::setOwnerId);
+        PatchUtils.ifPresent(command.content(), updatePage::setContent);
+//        if (command.name() != null) {
+//            updatePage.setName(command.name());
+//        }
+//        if (command.ownerId() != null) {
+//            updatePage.setOwnerId(command.ownerId());
+//        }
+//        if (command.content() != null) {
+//            updatePage.setContent(command.content());
+//        }
 
         // Update Page, then create revision
-        this.pageRepository.update(updatePage);
-        CreatePageRevisionCommand revisionCommand = PageRevisionCommandBuilder.from(new CreatePageRevisionRequest(
+        this.pageRepository.update(command.ownerId(), updatePage);
+        CreatePageRevisionCommand revisionCommand = PageRevisionCommandBuilder.from(command.ownerId(), new CreatePageRevisionRequest(
                 updatePage.getId(),
                 updatePage.getName(),
                 updatePage.getContent(),
@@ -162,7 +166,7 @@ public class PageServiceImpl implements PageService {
      */
     @Transactional
     @Override
-    public PageResponse archive(Long pageId, ArchivePageRequest request) {
+    public PageResponse archive(Long ownerId, Long pageId, ArchivePageRequest request) {
         // Create a queue to store all the pages we need to archive/unarchive
         boolean archived = request.isArchived();
         Queue<Page> queue = new ArrayDeque<>();
@@ -171,10 +175,10 @@ public class PageServiceImpl implements PageService {
         // Find the archive root or page to be archived
         if (archived) {
             // Wants to archive
-            parentPage = this.pageRepository.findById(pageId)
+            parentPage = this.pageRepository.findById(ownerId, pageId)
                     .orElseThrow(() -> new PageNotFoundException(pageId));
         } else {
-            parentPage = this.pageRepository.findByArchivedId(pageId)
+            parentPage = this.pageRepository.findByArchivedId(ownerId, pageId)
                     .orElseThrow(() -> new ArchivedPageNotFoundException(pageId));
         }
         queue.add(parentPage);
@@ -184,15 +188,15 @@ public class PageServiceImpl implements PageService {
             Page currPage = queue.poll();
             if (archived) {
                 // Archive page and add children
-                ArchiveUtils.archivePage(currPage, this.pageRepository);
-                queue.addAll(this.pageRepository.findAll(currPage.getId()));
+                ArchiveUtils.archivePage(ownerId, currPage, this.pageRepository);
+                queue.addAll(this.pageRepository.findAll(ownerId, currPage.getId()));
             } else {
                 // Unarchive page and add children
-                ArchiveUtils.unarchivePage(currPage, this.pageRepository);
+                ArchiveUtils.unarchivePage(ownerId, currPage, this.pageRepository);
                 // Reset the archived_at timestamp
-                this.pageRepository.resetArchivedDatetime(currPage.getId());
+                this.pageRepository.resetArchivedDatetime(ownerId, currPage.getId());
                 currPage.setArchivedAt(null);
-                queue.addAll(this.pageRepository.findAllArchivedChildren(currPage.getId()));
+                queue.addAll(this.pageRepository.findAllArchivedChildren(ownerId, currPage.getId()));
             }
         }
 
@@ -200,28 +204,28 @@ public class PageServiceImpl implements PageService {
     }
 
     @Override
-    public List<PageResponse> findAllArchived() {
+    public List<PageResponse> findAllArchived(Long ownerId) {
         // Retrieve all the Archive Root Pages
-        List<Page> archiveRoots = this.pageRepository.findAllArchivedPages();
+        List<Page> archiveRoots = this.pageRepository.findAllArchivedPages(ownerId);
 
         return PageMapper.toResponseList(archiveRoots);
     }
 
     @Override
-    public PageResponse findArchivedById(Long pageId) {
-        Page archivedPage = this.pageRepository.findByArchivedId(pageId)
+    public PageResponse findArchivedById(Long ownerId, Long pageId) {
+        Page archivedPage = this.pageRepository.findByArchivedId(ownerId, pageId)
                 .orElseThrow(() -> new ArchivedPageNotFoundException(pageId));
 
         return PageMapper.toResponse(archivedPage);
     }
 
     @Override
-    public List<PageResponse> findAllArchivedChildren(Long pageId) {
-        Page archivedPage = this.pageRepository.findByArchivedId(pageId)
+    public List<PageResponse> findAllArchivedChildren(Long ownerId, Long pageId) {
+        Page archivedPage = this.pageRepository.findByArchivedId(ownerId, pageId)
                 .orElseThrow(() -> new ArchivedPageNotFoundException(pageId));
 
         // If reach here, means must be archived
-        List<Page> archivedChildren = this.pageRepository.findAllArchivedChildren(pageId);
+        List<Page> archivedChildren = this.pageRepository.findAllArchivedChildren(ownerId, pageId);
         return PageMapper.toResponseList(archivedChildren);
     }
 

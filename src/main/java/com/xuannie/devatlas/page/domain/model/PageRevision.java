@@ -18,6 +18,7 @@ public class PageRevision {
     private String content;
     // Summary note about what the revision was about
     private String note;
+    private Long ownerId;
     private Long editedBy;
     // Immutable date time for revisions since they're a record
     private LocalDateTime createdAt;

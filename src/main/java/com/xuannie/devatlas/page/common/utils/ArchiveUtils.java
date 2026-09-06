@@ -9,16 +9,16 @@ public class ArchiveUtils {
     public ArchiveUtils() {}
 
     // Archives a Single Page
-    public static void archivePage(Page page, PageRepository pageRepository) {
+    public static void archivePage(Long ownerId, Page page, PageRepository pageRepository) {
         page.setArchived(true);
         // Set the timing if archiving else set to null
         page.setArchivedAt(LocalDateTime.now());
-        pageRepository.update(page);
+        pageRepository.update(ownerId, page);
     }
 
-    public static void unarchivePage(Page archivedPage, PageRepository pageRepository) {
+    public static void unarchivePage(Long ownerId, Page archivedPage, PageRepository pageRepository) {
         // Since the update function only update fields that are not null, we need to reset archived_at in service layer
         archivedPage.setArchived(false);
-        pageRepository.update(archivedPage);
+        pageRepository.update(ownerId, archivedPage);
     }
 }

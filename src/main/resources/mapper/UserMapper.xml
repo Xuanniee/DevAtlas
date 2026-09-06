@@ -3,7 +3,6 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.xuannie.devatlas.user.domain.repository.UserRepository">
-
     <!-- ResultMap tells MyBatis how to build a Java object out of a result-set row when it can't (or you don't want it to) guess -->
     <resultMap id="UserResultMap" type="com.xuannie.devatlas.user.domain.model.User">
         <id property="id" column="id"/>
@@ -11,8 +10,47 @@
         <result property="email" column="email"/>
         <result property="passwordHash" column="password_hash"/>
         <result property="createdAt" column="created_at"/>
-        <result property="modifiedAt" column="modifiedAt"/>
+        <result property="modifiedAt" column="modified_at"/>
     </resultMap>
 
+    <select id="findById" resultMap="UserResultMap">
+        SELECT *
+        FROM users
+        WHERE id = #{userId}
+        LIMIT 1;
+    </select>
 
+    <select id="findByEmail" resultMap="UserResultMap">
+        SELECT *
+        FROM users
+        WHERE email = #{email}
+        LIMIT 1;
+    </select>
+
+    <select id="existByEmail" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM users WHERE email = #{email});
+    </select>
+
+    <select id="findAll" resultMap="UserResultMap">
+        SELECT * FROM users;
+    </select>
+
+    <update id="update" useGeneratedKeys="true">
+        UPDATE users
+        <set>
+            <if test="user.name != null">name = #{user.name}, </if>
+            <if test="user.email != null">email = #{user.email}, </if>
+            <if test="user.passwordHash != null">password_hash = #{user.passwordHash}, </if>
+        </set>
+        WHERE id = #{userId};
+    </update>
+
+    <delete id="delete">
+        DELETE FROM users WHERE id = #{userId};
+    </delete>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (name, email, password_hash)
+        VALUES (#{user.name}, #{user.email}, #{user.passwordHash});
+    </insert>
 </mapper>

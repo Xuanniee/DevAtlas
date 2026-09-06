@@ -13,4 +13,9 @@ public class LoginUserRequest {
     @NotBlank(message = "User's password cannot be empty when registering.")
     @NotNull(message = "User's password cannot be null when registering.")
     private String password;
+
+    public LoginUserRequest(String email, String password) {
+        this.email = email;
+        this.password = password;
+    }
 }

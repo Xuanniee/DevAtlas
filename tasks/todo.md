@@ -287,14 +287,15 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 **Description:** Introduce Spring Security and a real identity module. Start with email/password registration and login, plus password hashing.
 
 **Acceptance criteria:**
-- [ ] Users can register with email and password.
-- [ ] Users can log in and receive the chosen auth mechanism.
-- [ ] Passwords are hashed, never stored in plain text.
+- [x] Users can register with email and password. Verified via code review (2026-09-06): `AuthController.register()` → `AuthServiceImpl.register()` rejects duplicate emails (`EmailAlreadyExistsException`) and inserts a new `User`.
+- [x] Users can log in and receive the chosen auth mechanism. Verified via code review (2026-09-06): `AuthServiceImpl.login()` validates the password and issues a JWT via `JwtServiceImpl.issueToken`.
+- [x] Passwords are hashed, never stored in plain text. Verified via code review (2026-09-06): `SecurityConfig.passwordEncoder()` uses `Argon2PasswordEncoder` via `DelegatingPasswordEncoder`; only `passwordHash` is ever persisted.
 
 **Verification:**
-- [ ] Tests pass: identity service and security tests.
-- [ ] Build succeeds: `./mvnw package` or `mvn package`
-- [ ] Manual check: register, log in, and call an authenticated endpoint.
+- [ ] Tests pass: identity service and security tests. Still no automated tests exist for the `user` module. Also, the full suite currently can't run at all: `mvn clean test` fails during Flyway migration on `V5__create__workspace_members.sql` (empty column list, `CREATE TABLE workspace_members()` — a Task 13 scaffold, unrelated to Task 11) before any test executes.
+- [ ] Build succeeds: `./mvnw package` or `mvn package`. `mvn compile` succeeds, but `mvn package`/`mvn test` currently fails due to the broken `V5` migration above, not because of Task 11 code.
+- [ ] Manual check: register, log in, and call an authenticated endpoint. Not yet performed live over HTTP — only verified via static code review so far.
+- [ ] Known gap (not blocking, but worth fixing before sign-off): `InvalidCredentialsException` extends `ApplicationException` directly, but `GlobalExceptionHandler` only has handlers for `NotFoundException`/`ConflictException`/catch-all — a wrong-password login currently returns a 500 instead of a proper 4xx.
 
 **Dependencies:** Task 10
 
@@ -312,14 +313,14 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 **Description:** Replace the temporary development user with a real current-user abstraction backed by Spring Security. Enforce ownership on workspace and page operations.
 
 **Acceptance criteria:**
-- [ ] Protected APIs require authentication.
-- [ ] Users can access their own workspaces/pages.
-- [ ] Users cannot access another user's private workspace/pages.
+- [x] Protected APIs require authentication. Verified via code review (2026-09-06): `SecurityConfig` requires authentication on every route except `/api/auth/**` and `/actuator/health`; `JwtAuthenticationFilter` populates `SecurityContextHolder` from a valid Bearer token.
+- [x] Users can access their own workspaces/pages. Verified via code review (2026-09-06): every controller resolves the caller via `@AuthenticationPrincipal Long ownerId`, threaded through the command/query builders into `WorkspaceServiceImpl`/`PageServiceImpl` and every repository call — the old hardcoded `ownerId = 1L` placeholder is gone.
+- [x] Users cannot access another user's private workspace/pages. Verified via code review (2026-09-06): audited every statement in `WorkspaceMapper.xml`, `PageMapper.xml`, and `PageRevisionMapper.xml` — all reads, writes, and deletes now scope by `owner_id` in the `WHERE` clause. (An earlier gap found and fixed during this review: `PageMapper.xml`'s `findAll`, `update`'s `WHERE`, `findArchivedById`, `findAllArchivedChildren`, `delete`, `resetArchivedDatetime`, and `isExistingSiblingPageByParentPage` were missing the `owner_id` filter — all now corrected.)
 
 **Verification:**
-- [ ] Tests pass: authorization tests for workspace and page APIs.
-- [ ] Build succeeds: `./mvnw package` or `mvn package`
-- [ ] Manual check: create two users and verify isolation.
+- [ ] Tests pass: authorization tests for workspace and page APIs. None exist yet (e.g. confirming user B gets a 404 fetching user A's workspace/page). Also currently blocked suite-wide by the broken `V5__create__workspace_members.sql` migration (see Task 11) — unrelated to Task 12's own code.
+- [ ] Build succeeds: `./mvnw package` or `mvn package`. `mvn compile` succeeds; `mvn package`/`mvn test` currently fails due to the `V5` migration issue, not Task 12 code.
+- [ ] Manual check: create two users and verify isolation. Not yet performed live over HTTP — only verified via static code review of the SQL/service/controller layers so far.
 
 **Dependencies:** Task 11
 

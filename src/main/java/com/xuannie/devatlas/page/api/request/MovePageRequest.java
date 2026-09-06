@@ -6,9 +6,12 @@ import lombok.Getter;
 @Getter
 public class MovePageRequest {
     @NotNull(message = "A new parent page must exist when trying to move a page under it.")
-    private Long parentId;
+    private Long currParentId;
 
-    public MovePageRequest(Long parentId) {
-        this.parentId = parentId;
+    private Long newParentId;
+
+    public MovePageRequest(Long currParentId, Long newParentId) {
+        this.currParentId = currParentId;
+        this.newParentId = newParentId;
     }
 }

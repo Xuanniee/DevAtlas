@@ -2,29 +2,27 @@ package com.xuannie.devatlas.page.application;
 
 import com.xuannie.devatlas.page.api.request.*;
 import com.xuannie.devatlas.page.api.response.PageResponse;
-import com.xuannie.devatlas.page.common.command.CreatePageCommand;
-import com.xuannie.devatlas.page.common.command.MoveOrRetrievePageCommand;
-import com.xuannie.devatlas.page.common.command.UpdatePageCommand;
+import com.xuannie.devatlas.page.common.command.*;
 
 import java.util.List;
 
 public interface PageService {
     PageResponse createPage(CreatePageCommand command);
 
-    List<PageResponse> findAll(MoveOrRetrievePageCommand command);
+    List<PageResponse> findAll(RetrievePageQuery command);
 
-    PageResponse getPageById(MoveOrRetrievePageCommand command);
+    PageResponse getPageById(RetrievePageQuery command);
 
-    PageResponse movePage(Long pageId, MovePageRequest request);
+    PageResponse movePage(MovePageCommand command);
 
     PageResponse update(UpdatePageCommand command);
 
-    PageResponse archive(Long pageId, ArchivePageRequest request);
+    PageResponse archive(Long ownerId, Long pageId, ArchivePageRequest request);
 
     // Every Archived Root Page is identified by archived is true, and the parent is either null or not archived
-    List<PageResponse> findAllArchived();
+    List<PageResponse> findAllArchived(Long ownerId);
 
-    PageResponse findArchivedById(Long pageId);
+    PageResponse findArchivedById(Long ownerId, Long pageId);
 
-    List<PageResponse> findAllArchivedChildren(Long pageId);
+    List<PageResponse> findAllArchivedChildren(Long ownerId, Long pageId);
 }

@@ -20,7 +20,7 @@ public class MoveUtils {
      * @param pageRepository
      * @return
      */
-    public static boolean wouldCreatePageMoveCycles(Long pageId, Page newParent, PageRepository pageRepository) {
+    public static boolean wouldCreatePageMoveCycles(Long ownerId, Long pageId, Page newParent, PageRepository pageRepository) {
         Long currPageId = newParent.getId();
         // Root has a parentId of null
         while (currPageId != null) {
@@ -36,7 +36,7 @@ public class MoveUtils {
             }
 
             // Move up the page tree
-            newParent = pageRepository.findById(newParent.getParentId())
+            newParent = pageRepository.findById(ownerId, newParent.getParentId())
                     .orElseThrow(() -> new ParentPageNotFoundException(pageId));
             currPageId = newParent.getId();
         }

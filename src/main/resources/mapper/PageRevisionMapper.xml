@@ -12,25 +12,28 @@
         <result property="name" column="name"/>
         <result property="content" column="content"/>
         <result property="note" column="note"/>
+        <result property="ownerId" column="owner_id"/>
         <result property="editedBy" column="edited_by"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
-    <insert id="create" useGeneratedKeys="true" keyProperty="id" parameterType="com.xuannie.devatlas.page.domain.model.PageRevision">
-        INSERT INTO revisions (page_id, revision_number, name, content, note, edited_by)
-        VALUES (#{pageId}, #{revisionNumber}, #{name}, #{content}, #{note}, #{editedBy});
+    <insert id="insert" useGeneratedKeys="true" keyProperty="pageRevision.id" parameterType="com.xuannie.devatlas.page.domain.model.PageRevision">
+        INSERT INTO revisions (page_id, revision_number, name, content, note, owner_id, edited_by)
+        VALUES (#{pageRevision.pageId}, #{pageRevision.revisionNumber}, #{pageRevision.name}, #{pageRevision.content}, #{pageRevision.note},  #{ownerId}, #{pageRevision.editedBy});
     </insert>
 
     <select id="getNextRevision" resultType="int">
         SELECT COALESCE(MAX(revision_number), 0) + 1
         FROM revisions
-        WHERE page_id = #{pageId};
+        WHERE page_id = #{pageId}
+        AND owner_id = #{ownerId};
     </select>
 
-    <select id="findAllByPageId" resultType="com.xuannie.devatlas.page.domain.model.PageRevision">
+    <select id="findAllByPageId" resultMap="PageRevisionResultMap">
         SELECT *
         FROM revisions
-        WHERE page_id = #{pageId};
+        WHERE page_id = #{pageId}
+        AND owner_id = #{ownerId};
     </select>
 
 

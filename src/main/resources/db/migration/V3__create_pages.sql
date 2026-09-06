@@ -31,5 +31,5 @@ CREATE INDEX idx_pages_workspace_parent ON pages (workspace_id, parent_id);
 CREATE INDEX idx_pages_owner_id ON pages (owner_id);
 
 -- Development seed data
-INSERT INTO users (name, email)
-VALUES ('Test User', 'test@example.com');
+INSERT INTO users (name, email, password_hash)
+VALUES ('Test User', 'test@example.com', '4203e02f448520c04e3f15dfeeda0859');

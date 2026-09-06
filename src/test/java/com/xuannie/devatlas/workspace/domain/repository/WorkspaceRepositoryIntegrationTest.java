@@ -82,12 +82,12 @@ public class WorkspaceRepositoryIntegrationTest {
         );
 
         // Assert that Workspace is inserted
-        workspaceRepository.insert(integrationTestWorkspace);
+        workspaceRepository.insert(ownerId, integrationTestWorkspace);
 
         assertThat(integrationTestWorkspace.getId()).isNotNull();
 
         Optional<Workspace> loaded =
-                workspaceRepository.findById(integrationTestWorkspace.getId());
+                workspaceRepository.findByOwnerId(ownerId, integrationTestWorkspace.getId());
 
         assertThat(loaded).isPresent();
         assertThat(loaded.get().getName())

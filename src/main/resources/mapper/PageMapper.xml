@@ -23,6 +23,7 @@
         SELECT *
         FROM pages
         WHERE id = #{pageId}
+        AND owner_id = #{ownerId}
         AND archived = FALSE;
     </select>
 
@@ -31,7 +32,8 @@
         SELECT *
         FROM pages
         WHERE parent_id = #{parentId}
-        AND archived = FALSE;
+        AND archived = FALSE
+        AND owner_id = #{ownerId};
     </select>
 
     <!-- Viewing archived pages should be done with specific functions -->
@@ -39,36 +41,44 @@
         SELECT *
         FROM pages
         WHERE id = #{pageId}
-        AND archived = TRUE;
+        AND archived = TRUE
+        AND owner_id = #{ownerId};
     </select>
 
     <select id="isExistingSiblingPageByParentPage" resultType="boolean">
-        SELECT EXISTS(SELECT 1 FROM pages WHERE parent_id = #{parentId} AND name = #{pageName});
+        SELECT EXISTS(
+            SELECT 1
+            FROM pages
+            WHERE parent_id = #{parentId}
+            AND name = #{pageName}
+            AND owner_id = #{ownerId}
+        );
     </select>
 
     <!-- useGeneratedKeys="true" returns the generated primary key -->
-    <insert id="insert" useGeneratedKeys="true" keyProperty="id" parameterType="com.xuannie.devatlas.page.domain.model.Page">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="page.id" parameterType="com.xuannie.devatlas.page.domain.model.Page">
         INSERT INTO pages (name, workspace_id, parent_id, owner_id, content)
-        VALUES (#{name}, #{workspaceId}, #{parentId}, #{ownerId}, #{content});
+        VALUES (#{page.name}, #{page.workspaceId}, #{page.parentId}, #{page.ownerId}, #{page.content});
     </insert>
 
     <!-- Can update workspace_id since we can move pages eventually but not rootPage -->
     <update id="update" useGeneratedKeys="true" parameterType="com.xuannie.devatlas.page.domain.model.Page">
         UPDATE pages
         <set>
-            <if test="name != null">name = #{name}, </if>
-            <if test="workspaceId != null">workspace_id = #{workspaceId}, </if>
-            <if test="parentId != null">parent_id = #{parentId}, </if>
-            <if test="archivedAt != null">archived_at = #{archivedAt}, </if>
-            <if test="content != null">content = #{content}, </if>
+            <if test="page.name != null">name = #{page.name}, </if>
+            <if test="page.workspaceId != null">workspace_id = #{page.workspaceId}, </if>
+            <if test="page.parentId != null">parent_id = #{page.parentId}, </if>
+            <if test="page.archivedAt != null">archived_at = #{page.archivedAt}, </if>
+            <if test="page.content != null">content = #{page.content}, </if>
             <if test="ownerId != null">owner_id = #{ownerId}, </if>
-            <if test="archived != null">archived = #{archived}, </if>
+            <if test="page.archived != null">archived = #{page.archived}, </if>
         </set>
-        WHERE id = #{id}
+        WHERE id = #{page.id}
+        AND owner_id = #{ownerId};
     </update>
 
     <delete id="delete">
-        DELETE FROM pages WHERE id = #{pageId}
+        DELETE FROM pages WHERE id = #{pageId} AND owner_id = #{ownerId};
     </delete>
 
     <!-- An Archive Root is any page that has been archived, and has null as a parent or the parent isnt archived -->
@@ -78,26 +88,30 @@
         LEFT JOIN pages parent
         ON p.parent_id = parent.id
         WHERE p.archived = TRUE
-        AND (p.parent_id IS NULL OR parent.archived = FALSE);
+        AND (p.parent_id IS NULL OR parent.archived = FALSE)
+        AND owner_id = #{ownerId};
     </select>
 
     <select id="findByArchivedId" resultMap="PageResultMap">
         SELECT *
         FROM pages
         WHERE id = #{pageId}
-        AND archived = TRUE;
+        AND archived = TRUE
+        AND owner_id = #{ownerId};
     </select>
 
     <select id="findAllArchivedChildren" resultMap="PageResultMap">
         SELECT *
         FROM pages
         WHERE parent_id = #{pageId}
-        AND archived = TRUE;
+        AND archived = TRUE
+        AND owner_id = #{ownerId};
     </select>
 
     <update id="resetArchivedDatetime" parameterType="Long">
         UPDATE pages
         SET archived_at = null
-        WHERE id = #{pageId};
+        WHERE id = #{pageId}
+        AND owner_id = #{ownerId};
     </update>
 </mapper>

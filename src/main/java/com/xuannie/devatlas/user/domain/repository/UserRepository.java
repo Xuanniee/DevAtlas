@@ -1,26 +1,28 @@
 package com.xuannie.devatlas.user.domain.repository;
 
-import com.xuannie.devatlas.user.common.command.CreateUserCommand;
-import com.xuannie.devatlas.user.common.command.UpdateUserCommand;
 import com.xuannie.devatlas.user.domain.model.User;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 import java.util.Optional;
 
 @Mapper
 public interface UserRepository {
-    Optional<User> findById(Long userId);
+    Optional<User> findById(@Param("userId") Long userId);
 
-    Optional<User> findByEmail(String email);
+    Optional<User> findByEmail(@Param("email") String email);
 
-    boolean existByEmail(String email);
+    boolean existByEmail(@Param("email") String email);
 
     List<User> findAll();
 
-    void update(Long userId, UpdateUserCommand command);
+    void update(
+            @Param("userId") Long userId,
+            @Param("user") User updatedUser
+    );
 
-    void delete(Long userId);
+    void delete(@Param("userId") Long userId);
 
-    void create(User user);
+    void insert(@Param("user") User updatedUser);
 }

@@ -13,8 +13,8 @@ public class CreatePageRequest {
     @Size(max = 256, message = "Name cannot be more than 256 characters.")
     private String name;
 
-    @NotNull(message = "ownerId cannot be null as page must belong to a user")
-    private Long ownerId;
+//    @NotNull(message = "ownerId cannot be null as page must belong to a user")
+//    private Long ownerId;
 
     // Cannot be NULL since root pages are created elsewhere
     @NotNull(message = "parentId cannot be NULL since root pages are created at workspace level")
@@ -27,7 +27,7 @@ public class CreatePageRequest {
     // workspace the user is in
     public CreatePageRequest(String name, String content, Long workspaceId, Long ownerId, Long parentId) {
         this.name = name;
-        this.ownerId = ownerId;
+//        this.ownerId = ownerId;
         this.parentId = parentId;
         this.content = content;
     }

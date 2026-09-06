@@ -22,15 +22,25 @@
     </resultMap>
 
     <insert id="insert" parameterType="com.xuannie.devatlas.workspace.domain.entity.Workspace"
-            useGeneratedKeys="true" keyProperty="id">
+            useGeneratedKeys="true" keyProperty="workspace.id">
         INSERT INTO workspaces (name, slug, description, status, visibility, category, permissions, root_page_id,
         owner_id)
-        VALUES (#{name}, #{slug}, #{description}, #{status}, #{visibility}, #{category}, #{permissions},
-        #{homePageId}, #{ownerId})
+        VALUES (#{workspace.name}, #{workspace.slug}, #{workspace.description}, #{workspace.status}, #{workspace.visibility}, #{workspace.category}, #{workspace.permissions},
+        #{workspace.homePageId}, #{ownerId})
     </insert>
 
-    <select id="findById" resultMap="WorkspaceResultMap">
-        SELECT * FROM workspaces WHERE id = #{id}
+    <select id="findByOwnerId" resultMap="WorkspaceResultMap">
+        SELECT *
+        FROM workspaces
+        WHERE owner_id = #{ownerId}
+        AND id = #{workspaceId};
+    </select>
+
+    <select id="findByOwnerSlug" resultMap="WorkspaceResultMap">
+        SELECT *
+        FROM workspaces
+        WHERE owner_id = #{ownerId}
+        AND slug = #{slug};
     </select>
 
     <select id="findAll" resultMap="WorkspaceResultMap">
@@ -45,21 +55,24 @@
         UPDATE workspaces
         <set>
             <!-- Left side is SQL, Right is Java -->
-            <if test="name != null">name = #{name}, </if>
-            <if test="slug != null">slug = #{slug}, </if>
-            <if test="description != null">description = #{description}, </if>
-            <if test="status != null">status = #{status}, </if>
-            <if test="homePageId != null">root_page_id = #{homePageId}, </if>
-            <if test="visibility != null">visibility = #{visibility}, </if>
-            <if test="category != null">category = #{category}, </if>
-            <if test="permissions != null">permissions = #{permissions}, </if>
-            <if test="archivedAt != null">archived_at = #{archivedAt}, </if>
+            <if test="workspace.name != null">name = #{workspace.name}, </if>
+            <if test="workspace.slug != null">slug = #{workspace.slug}, </if>
+            <if test="workspace.description != null">description = #{workspace.description}, </if>
+            <if test="workspace.status != null">status = #{workspace.status}, </if>
+            <if test="workspace.homePageId != null">root_page_id = #{workspace.homePageId}, </if>
+            <if test="workspace.visibility != null">visibility = #{workspace.visibility}, </if>
+            <if test="workspace.category != null">category = #{workspace.category}, </if>
+            <if test="workspace.permissions != null">permissions = #{workspace.permissions}, </if>
+            <if test="workspace.archivedAt != null">archived_at = #{workspace.archivedAt}, </if>
         </set>
-        WHERE id = #{id}
+        WHERE id = #{workspace.id}
+        AND owner_id = #{ownerId};
     </update>
 
-    <delete id="deleteById">
-        DELETE FROM workspaces WHERE id = #{id}
+    <delete id="delete">
+        DELETE FROM workspaces
+        WHERE id = #{workspaceId}
+        AND owner_id = #{ownerId};
     </delete>
 
     <update id="clearArchivedAt">
@@ -67,7 +80,7 @@
     </update>
 
     <select id="existsBySlug" resultType="boolean">
-        SELECT EXISTS(SELECT 1 FROM workspaces WHERE slug = #{slug})
+        SELECT EXISTS(SELECT 1 FROM workspaces WHERE owner_id = #{ownerId} AND slug = #{slug})
     </select>
 
     <select id="isExistingWorkspaceNameByOwner" resultType="boolean">

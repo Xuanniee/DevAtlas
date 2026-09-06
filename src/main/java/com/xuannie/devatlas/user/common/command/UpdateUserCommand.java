@@ -3,7 +3,8 @@ package com.xuannie.devatlas.user.common.command;
 import com.xuannie.devatlas.common.command.Command;
 
 public record UpdateUserCommand(
-        String name,
-        String email,
-        String passwordHash
+        Long userId,
+        String newName,
+        String newEmail,
+        String newPassword
 ) implements Command {}

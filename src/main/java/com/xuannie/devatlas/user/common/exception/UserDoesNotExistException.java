@@ -6,4 +6,8 @@ public class UserDoesNotExistException extends NotFoundException {
     public UserDoesNotExistException(String email) {
         super("User with email " + email + " does not exist.");
     }
+
+    public UserDoesNotExistException(Long userId) {
+        super("User with ID " + userId + " does not exist.");
+    }
 }

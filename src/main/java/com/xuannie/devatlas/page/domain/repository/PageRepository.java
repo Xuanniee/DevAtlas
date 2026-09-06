@@ -2,29 +2,58 @@ package com.xuannie.devatlas.page.domain.repository;
 
 import com.xuannie.devatlas.page.domain.model.Page;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 import java.util.Optional;
 
 @Mapper
 public interface PageRepository {
-    Optional<Page> findById(Long pageId);
+    Optional<Page> findById(
+            @Param("ownerId") Long ownerId,
+            @Param("pageId") Long pageId
+    );
 
-    boolean isExistingSiblingPageByParentPage(Long parentId, String pageName);
+    boolean isExistingSiblingPageByParentPage(
+            @Param("ownerId") Long ownerId,
+            @Param("parentId") Long parentId,
+            @Param("pageName") String pageName
+    );
 
-    List<Page> findAll(Long parentId);
+    List<Page> findAll(
+            @Param("ownerId") Long ownerId,
+            @Param("parentId") Long parentId
+    );
 
-    void insert(Page page);
+    void insert(
+            @Param("ownerId") Long ownerId,
+            @Param("page") Page page
+    );
 
-    void update(Page page);
+    void update(
+            @Param("ownerId") Long ownerId,
+            @Param("page") Page page
+    );
 
-    void delete(Long pageId);
+    void delete(
+            @Param("ownerId") Long ownerId,
+            @Param("pageId") Long pageId
+    );
 
-    Optional<Page> findByArchivedId(Long archivedPageId);
+    Optional<Page> findByArchivedId(
+            @Param("ownerId") Long ownerId,
+            @Param("archivedPageId") Long archivedPageId
+    );
 
-    List<Page> findAllArchivedPages();
+    List<Page> findAllArchivedPages(@Param("ownerId") Long ownerId);
 
-    List<Page> findAllArchivedChildren(Long pageId);
+    List<Page> findAllArchivedChildren(
+            @Param("ownerId") Long ownerId,
+            @Param("pageId") Long pageId
+    );
 
-    void resetArchivedDatetime(Long pageId);
+    void resetArchivedDatetime(
+            @Param("ownerId") Long ownerId,
+            @Param("pageId") Long pageId
+    );
 }
