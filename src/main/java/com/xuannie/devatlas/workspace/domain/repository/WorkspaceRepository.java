@@ -2,6 +2,7 @@ package com.xuannie.devatlas.workspace.domain.repository;
 
 import com.xuannie.devatlas.workspace.domain.entity.Workspace;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,21 +13,38 @@ import java.util.Optional;
  */
 @Mapper
 public interface WorkspaceRepository {
-    Optional<Workspace> findById(Long workspaceId);
+    Optional<Workspace> findByUserId(
+            @Param("userId") Long userId,
+            @Param("workspaceId") Long workspaceId
+    );
 
-    Optional<Workspace> findBySlug(String slug);
+    Optional<Workspace> findByOwnerSlug(
+            @Param("userId") Long userId,
+            @Param("slug") String slug
+    );
 
-    List<Workspace> findAll(Long ownerId);
+    List<Workspace> findAll(@Param("userId") Long userId);
 
     // Check if a Workspace has an existing slug
-    boolean existsBySlug(String slug);
+    boolean existsBySlug(@Param("userId") Long userId, @Param("slug") String slug);
 
     // Check if the same owner has created a Workspace with this name before
-    boolean isExistingWorkspaceNameByOwner(Long ownerId, String name);
+    boolean isExistingWorkspaceNameByOwner(
+            @Param("userId")Long userId,
+            @Param("name") String name
+    );
 
-    void insert(Workspace workspace);
+    // Only owner can create, update or delete their own workspace
+    void insert(
+            @Param("userId")Long userId,
+            @Param("workspace") Workspace workspace
+    );
 
-    void update(Workspace workspace);
+    void update(@Param("userId")Long userId,
+                @Param("workspace") Workspace workspace
+    );
 
-    void deleteById(Long id);
+    void delete(@Param("userId")Long userId,
+                @Param("workspaceId") Long workspaceId
+    );
 }

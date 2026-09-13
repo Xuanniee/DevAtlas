@@ -2,9 +2,12 @@ package com.xuannie.devatlas.workspace.common.mapper;
 
 import com.xuannie.devatlas.workspace.api.request.CreateWorkspaceRequest;
 import com.xuannie.devatlas.workspace.api.response.WorkspaceResponse;
-import com.xuannie.devatlas.workspace.common.enums.WorkspacePermissions;
+import com.xuannie.devatlas.workspace.common.command.CreateWorkspaceCommand;
 import com.xuannie.devatlas.workspace.common.enums.WorkspaceStatus;
 import com.xuannie.devatlas.workspace.domain.entity.Workspace;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class WorkspaceMapper {
@@ -13,19 +16,18 @@ public class WorkspaceMapper {
 
     // Use Builder to create the workspace
     public static Workspace toEntity(
-        CreateWorkspaceRequest request,
+        CreateWorkspaceCommand command,
         Long ownerId,
         String slug
     ) {
         return Workspace.builder()
                 .slug(slug)
-                .name(request.getName())
-                .description(request.getDescription())
+                .name(command.name())
+                .description(command.description())
                 .status(WorkspaceStatus.ACTIVE)
-                .visibility(request.getVisibility())
-                .category(request.getCategory())
+                .visibility(command.visibility())
+                .category(command.category())
                 .ownerId(ownerId)
-                .permissions(WorkspacePermissions.ADMIN)
                 .build();
     }
 
@@ -42,5 +44,13 @@ public class WorkspaceMapper {
             workspace.getHomePageId(),
             workspace.getCreatedAt()
         );
+    }
+
+    public static List<WorkspaceResponse> toResponseList(List<Workspace> workspaces) {
+        List<WorkspaceResponse> results = new ArrayList<>();
+        for (Workspace workspace: workspaces) {
+            results.add(WorkspaceMapper.toResponse(workspace));
+        }
+        return results;
     }
 }

@@ -15,6 +15,8 @@ public class Page {
     private Long workspaceId;
     private Long parentId;
     private Long ownerId;
+    private String content;
+    private boolean archived;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
     private LocalDateTime archivedAt;
@@ -28,6 +30,8 @@ public class Page {
         Long workspaceId,
         Long parentId,
         Long ownerId,
+        String content,
+        boolean archived,
         LocalDateTime createdAt,
         LocalDateTime modifiedAt,
         LocalDateTime archivedAt
@@ -37,6 +41,8 @@ public class Page {
         this.workspaceId = workspaceId;
         this.parentId = parentId;
         this.ownerId = ownerId;
+        this.content = content;
+        this.archived = archived;
         this.createdAt = createdAt;
         this.modifiedAt = modifiedAt;
         this.archivedAt = archivedAt;

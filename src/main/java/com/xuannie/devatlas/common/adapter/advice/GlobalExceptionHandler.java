@@ -2,9 +2,12 @@ package com.xuannie.devatlas.common.adapter.advice;
 
 import com.xuannie.devatlas.common.error.ConflictException;
 import com.xuannie.devatlas.common.error.ErrorResponseFactory;
+import com.xuannie.devatlas.common.error.ForbiddenException;
 import com.xuannie.devatlas.common.error.NotFoundException;
 import com.xuannie.devatlas.workspace.common.exceptions.WorkspaceAlreadyExistsException;
 import com.xuannie.devatlas.workspace.common.exceptions.WorkspaceNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.validation.FieldError;
 import org.springframework.web.ErrorResponse;
@@ -25,6 +28,8 @@ import java.util.stream.Collectors;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
 //    // Handle when any request failed to be validated with @Valid in any Controller
 //    @ExceptionHandler(MethodArgumentNotValidException.class)
 //    public ResponseEntity<Map<String, String>> handleValidationErrors(MethodArgumentNotValidException exception) {
@@ -62,9 +67,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ErrorResponseFactory.of(HttpStatus.CONFLICT, exception.getMessage());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ProblemDetail handleForbidden(Exception exception) {
+        return ErrorResponseFactory.of(HttpStatus.FORBIDDEN, exception.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpected(Exception exception) {
-        // log it — this is the "something we didn't anticipate" bucket
+        // this is the "something we didn't anticipate" bucket - log it so it's
+        // actually diagnosable, since the client only ever sees a generic message
+        log.error("Unexpected error", exception);
         return ErrorResponseFactory.of(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected Error");
     }
 }

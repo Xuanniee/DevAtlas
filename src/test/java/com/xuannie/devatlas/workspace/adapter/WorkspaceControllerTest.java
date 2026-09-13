@@ -8,16 +8,23 @@ import com.xuannie.devatlas.workspace.common.enums.WorkspaceStatus;
 import com.xuannie.devatlas.workspace.common.enums.WorkspaceVisibility;
 import com.xuannie.devatlas.workspace.common.exceptions.WorkspaceAlreadyExistsException;
 import com.xuannie.devatlas.workspace.common.exceptions.WorkspaceNotFoundException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -29,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 // @WebMvcTest boots only the web layer
 @WebMvcTest(WorkspaceController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @Import(GlobalExceptionHandler.class)
 public class WorkspaceControllerTest {
     // MockMvc is a fake HTTP client that talks to Spring's DispatcherServlet in-process
@@ -39,6 +47,20 @@ public class WorkspaceControllerTest {
     // Place a Mockito mock into the application context, registered as the WorkspaceService bean
     @MockitoBean
     private WorkspaceServiceImpl workspaceService;
+
+    private static final Long OWNER_ID = 1L;
+
+    @BeforeEach
+    void seedAuthentication() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(OWNER_ID, null, List.of())
+        );
+    }
+
+    @AfterEach
+    void clearAuthentication() {
+        SecurityContextHolder.clearContext();
+    }
 
     // Test a successful Workspace Creation
     @Test
@@ -57,7 +79,7 @@ public class WorkspaceControllerTest {
         );
 
         // When this method is called with any argument, return this response
-        when(workspaceService.createWorkspace(any())).thenReturn(response);
+        when(workspaceService.createWorkspace(eq(OWNER_ID), any())).thenReturn(response);
 
         // Simulates an actual HTTP Post request with body
         mockMvc.perform(post("/api/workspaces")
@@ -80,7 +102,7 @@ public class WorkspaceControllerTest {
                         "for Test Workspace"));
 
         // Ensure the Controller is delegated to the service
-        verify(workspaceService).createWorkspace(any());
+        verify(workspaceService).createWorkspace(eq(OWNER_ID), any());
     }
 
     // Test to ensure @Valid prevents request from being processed
@@ -110,7 +132,7 @@ public class WorkspaceControllerTest {
     void duplicateWorkspaceNameAndReturn409() throws Exception {
         // Arrange: stub the mock FIRST, before the request that triggers it
         String workspaceName = "Duplicate Workspace";
-        when(workspaceService.createWorkspace(any()))
+        when(workspaceService.createWorkspace(eq(OWNER_ID), any()))
                 .thenThrow(new WorkspaceAlreadyExistsException(workspaceName));
 
         // Act + Assert: simulate the actual HTTP POST request with body
@@ -135,7 +157,7 @@ public class WorkspaceControllerTest {
         Long workspaceId = 1L;
         // Tell it to throw only if they want to request for this particular workspace to simulate not found for
         // workspaceId 1L only
-        when(workspaceService.getWorkspaceById(workspaceId))
+        when(workspaceService.getWorkspaceById(OWNER_ID, workspaceId))
                 .thenThrow(new WorkspaceNotFoundException(workspaceId));
 
         // Act + Assert the failure by passing in workspaceId to path

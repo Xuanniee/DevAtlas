@@ -1,0 +1,21 @@
+# Maven
+target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Env files (if you ever add one)
+.env
+.env.local
+application-local.yml
+
+# Claude Code assistant config/notes (local-only, not part of the project)
+CLAUDE.md
+.claude/

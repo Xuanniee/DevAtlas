@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xuannie.devatlas.workspace_members.domain.repository.WorkspaceMemberRepository">
+
+    <!-- Property is the Spring Boot Var name we are populating from DB with the column val -->
+    <resultMap id="WorkspaceMemberResultMap" type="com.xuannie.devatlas.workspace_members.domain.model.WorkspaceMember">
+        <id property="id" column="id"/>
+        <result property="workspaceId" column="workspace_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="role" column="role"/>
+        <result property="joinedAt" column="joined_at"/>
+    </resultMap>
+
+    <select id="findByWorkspaceId" resultMap="WorkspaceMemberResultMap">
+        SELECT * FROM workspace_members
+        WHERE user_id = #{userId} AND workspace_id = #{workspaceId};
+    </select>
+
+    <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+        INSERT INTO workspace_members (workspace_id, user_id, role)
+        VALUES (#{workspaceMember.workspaceId}, #{workspaceMember.userId}, #{workspaceMember.role});
+    </insert>
+
+    <update id="update" useGeneratedKeys="true">
+        UPDATE workspace_members
+        SET role = #{updatedWorkspaceMember.role}
+        WHERE user_id = #{updatedWorkspaceMember.userId} AND workspace_id = #{updatedWorkspaceMember.workspaceId};
+    </update>
+
+    <delete id="delete">
+        DELETE FROM workspace_members
+        WHERE user_id = #{userId} AND workspace_id = #{workspaceId};
+    </delete>
+</mapper>
