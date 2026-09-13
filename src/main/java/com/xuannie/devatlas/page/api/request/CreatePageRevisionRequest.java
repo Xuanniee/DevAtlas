@@ -5,9 +5,6 @@ import lombok.Getter;
 
 @Getter
 public class CreatePageRevisionRequest {
-    @NotNull(message = "Page ID must be provided when creating a revision for a page.")
-    private Long pageId;
-
     @NotNull(message = "Page revision name must not be null.")
     private String name;
 
@@ -18,8 +15,7 @@ public class CreatePageRevisionRequest {
     @NotNull(message = "User ID of the user that revised this apge must be provided.")
     private Long editedBy;
 
-    public CreatePageRevisionRequest(Long pageId, String name, String content, String note, Long editedBy) {
-        this.pageId = pageId;
+    public CreatePageRevisionRequest(String name, String content, String note, Long editedBy) {
         this.name = name;
         this.content = content;
         this.note = note;

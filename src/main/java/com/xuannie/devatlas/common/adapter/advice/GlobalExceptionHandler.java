@@ -65,7 +65,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ForbiddenException.class)
     public ProblemDetail handleForbidden(Exception exception) {
-        return ErrorResponseFactory.of(HttpStatus.UNAUTHORIZED, exception.getMessage());
+        return ErrorResponseFactory.of(HttpStatus.FORBIDDEN, exception.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

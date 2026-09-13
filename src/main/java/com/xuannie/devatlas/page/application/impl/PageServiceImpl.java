@@ -193,8 +193,7 @@ public class PageServiceImpl implements PageService {
 
         // Update Page, then create revision
         this.pageRepository.update(command.userId(), updatePage);
-        CreatePageRevisionCommand revisionCommand = PageRevisionCommandBuilder.from(command.userId(), new CreatePageRevisionRequest(
-                updatePage.getId(),
+        CreatePageRevisionCommand revisionCommand = PageRevisionCommandBuilder.from(command.userId(), updatePage.getWorkspaceId(), updatePage.getId(), new CreatePageRevisionRequest(
                 updatePage.getName(),
                 updatePage.getContent(),
                 command.updateNote(),

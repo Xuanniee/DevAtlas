@@ -28,7 +28,7 @@ public class WorkspaceController {
     private WorkspaceService workspaceService;
 
     @GetMapping
-    public List<Workspace> listAllWorkspaces(
+    public List<WorkspaceResponse> listAllWorkspaces(
             @AuthenticationPrincipal Long userId
     ) {
         return workspaceService.listAllWorkspaces(userId);

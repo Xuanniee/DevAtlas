@@ -45,8 +45,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
      * @return
      */
     @Override
-    public List<Workspace> listAllWorkspaces(Long userId) {
-        return this.workspaceRepository.findAll(userId);
+    public List<WorkspaceResponse> listAllWorkspaces(Long userId) {
+        List<Workspace> workspaces = this.workspaceRepository.findAll(userId);
+        return WorkspaceMapper.toResponseList(workspaces);
     }
 
     @Override

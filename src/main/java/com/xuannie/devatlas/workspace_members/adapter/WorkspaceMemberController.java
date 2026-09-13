@@ -1,15 +1,11 @@
 package com.xuannie.devatlas.workspace_members.adapter;
 
-import com.xuannie.devatlas.workspace.api.request.DeleteWorkspaceMemberRequest;
 import com.xuannie.devatlas.workspace_members.api.request.CreateWorkspaceMemberRequest;
 import com.xuannie.devatlas.workspace_members.api.request.UpdateWorkspaceMemberRequest;
-import com.xuannie.devatlas.workspace_members.api.request.ViewWorkspaceMemberRequest;
 import com.xuannie.devatlas.workspace_members.api.response.WorkspaceMemberResponse;
 import com.xuannie.devatlas.workspace_members.app.WorkspaceMemberService;
 import com.xuannie.devatlas.workspace_members.common.commands.*;
-import com.xuannie.devatlas.workspace_members.common.exception.UnauthorisedWorkspaceMemberException;
 import jakarta.validation.Valid;
-import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -41,24 +37,24 @@ public class WorkspaceMemberController {
         return this.workspaceMemberService.update(command);
     }
 
-    @GetMapping("/{workspaceId}")
+    @GetMapping("/{workspaceId}/{targetUserId}")
     public WorkspaceMemberResponse getMemberRole(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long workspaceId,
-            @Valid @RequestBody ViewWorkspaceMemberRequest request
+            @PathVariable Long targetUserId
     ) {
-       GetWorkspaceMemberQuery query = WorkspaceMemberQueryBuilder.from(userId, workspaceId, request);
+       GetWorkspaceMemberQuery query = WorkspaceMemberQueryBuilder.from(userId, workspaceId, targetUserId);
        return this.workspaceMemberService.findByWorkspaceId(query);
     }
 
     // To remove a Member, Owner not allowed to be stripped
-    @DeleteMapping("/{workspaceId}/delete")
+    @DeleteMapping("/{workspaceId}/{targetUserId}/delete")
     public WorkspaceMemberResponse delete(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long workspaceId,
-            @Valid @RequestBody DeleteWorkspaceMemberRequest request
+            @PathVariable Long targetUserId
     ) {
-        DeleteWorkspaceMemberCommand command = WorkspaceMemberCommandBuilder.from(userId, workspaceId, request);
+        DeleteWorkspaceMemberCommand command = WorkspaceMemberCommandBuilder.from(userId, workspaceId, targetUserId);
         return this.workspaceMemberService.delete(command);
     }
 }

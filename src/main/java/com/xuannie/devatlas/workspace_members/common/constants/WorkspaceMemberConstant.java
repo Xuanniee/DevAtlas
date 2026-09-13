@@ -16,4 +16,7 @@ public final class WorkspaceMemberConstant {
     public static final String EDIT_PAGE_OPERATION = "EDIT_PAGE";
     public static final String ARCHIVE_PAGE_OPERATION = "ARCHIVE_PAGE";
     public static final String FIND_ARCHIVE_PAGE_OPERATION = "FIND_ARCHIVE_PAGE";
+
+    public static final String CREATE_PAGE_REVISION_OPERATION = "CREATE_PAGE_REVISION";
+    public static final String READ_PAGE_REVISION_OPERATION = "READ_PAGE_REVISION";
 }

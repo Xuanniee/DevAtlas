@@ -15,27 +15,30 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/revisions")
+@RequestMapping("/api/{workspaceId}/pages")
 public class PageRevisionController {
     @Autowired
     private PageRevisionService pageRevisionService;
 
-    @PostMapping("/v1/create")
+    @PostMapping("/v1/{pageId}/revisions/create")
     public PageRevisionResponse create(
-            @AuthenticationPrincipal Long ownerId,
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long workspaceId,
+            @PathVariable Long pageId,
             @Valid @RequestBody CreatePageRevisionRequest request
     ) {
-        CreatePageRevisionCommand command = PageRevisionCommandBuilder.from(ownerId, request);
+        CreatePageRevisionCommand command = PageRevisionCommandBuilder.from(userId, workspaceId, pageId, request);
         return this.pageRevisionService.create(command);
     }
 
     // Retrieve Revision Metadta
-    @GetMapping("/v1/{pageId}/findAll")
+    @GetMapping("/v1/{pageId}/revisions/findAll")
     public List<PageRevisionResponse> findAllByPageId(
-            @AuthenticationPrincipal Long ownerId,
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long workspaceId,
             @PathVariable Long pageId
     ) {
-        RetrievePageRevisionsQuery query = PageRevisionQueryBuilder.from(ownerId, pageId);
+        RetrievePageRevisionsQuery query = PageRevisionQueryBuilder.from(userId, workspaceId, pageId);
         return this.pageRevisionService.findAllByPageId(query);
     }
 }

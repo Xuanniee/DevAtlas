@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface WorkspaceService {
 
-    List<Workspace> listAllWorkspaces(Long userId);
+    List<WorkspaceResponse> listAllWorkspaces(Long userId);
 
     WorkspaceResponse getWorkspaceById(Long userId, Long workspaceId);
 

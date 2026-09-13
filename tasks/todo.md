@@ -418,9 +418,9 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Ownership and membership checks are enforced.
 - [ ] Security behavior has automated tests.
 
-## Sprint 4: Real-Time Collaborative Editing
+## Sprint 4: Redis & Live Sessions
 
-**Reprioritized in (2026-09-13, see `tasks/plan.md`):** this sprint now runs immediately after Sprint 3, ahead of Learning/Career Tracker — it's the feature that actually differentiates a Confluence clone from basic CRUD, so it's no longer stuck behind lower-value boilerplate.
+**Reprioritized (2026-09-13, see `tasks/plan.md`):** this sprint now runs immediately after Sprint 3, ahead of Learning/Career Tracker. Scope narrowed to just Tasks 30-31 — the minimum needed to give Redis a real (non-toy) job. Task 32 (conflict handling) and Task 33 (presence indicators) are pushed to a later polish pass so Sprint 5 (RocketMQ) doesn't have to wait on them.
 
 ## Task 30: Add WebSocket Infrastructure for Live Page Sessions
 
@@ -468,6 +468,16 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Medium: 3-5 files
 
+## Checkpoint: Redis & Live Sessions
+
+- [ ] Two authenticated clients can join the same page's live session and see each other present.
+- [ ] A content edit from one client reaches every other connected client, including across app instances (proves Redis pub/sub, not just an in-memory map).
+- [ ] Presence rebuilds correctly after an app restart.
+
+## Sprint 4.5 (Deferred polish — build after Sprint 5's RocketMQ work): Collaboration Polish
+
+**Status:** Deferred (2026-09-13, see `tasks/plan.md`) — these refine the collaboration UX but don't teach Redis/RocketMQ specifically, so RocketMQ (Sprint 5) doesn't need to wait on them.
+
 ## Task 32: Add Concurrent Edit Conflict Handling for Page Content
 
 **Description:** Handle two users saving edits to the same page at nearly the same time. Start with optimistic concurrency — a `version` column on pages, incremented on every content update — as a deliberate, honest stepping stone toward full operational-transform/CRDT merging later, not a final answer. A save against a stale version is rejected, not silently overwritten.
@@ -514,12 +524,10 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Small-Medium: 2-4 files
 
-## Checkpoint: Collaboration
+## Checkpoint: Collaboration Polish (deferred)
 
-- [ ] Two authenticated clients can join the same page's live session and see each other present.
-- [ ] A content edit from one client reaches every other connected client, including across app instances.
 - [ ] Conflicting near-simultaneous saves are detected and surfaced, not silently lost.
-- [ ] Presence recovers correctly after a dropped connection or app restart.
+- [ ] Live presence indicators are visible in the UI, not just tracked server-side.
 
 ## Sprint 4 (Deferred): Learning Tracker
 
@@ -687,74 +695,49 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Career state transitions are validated.
 - [ ] Reminder patterns are reused cleanly.
 
-## Sprint 5 (revised order): Redis, RocketMQ, and Production Readiness
+## Sprint 5 (revised order): RocketMQ Domain Events
 
-**Reprioritized (2026-09-13, see `tasks/plan.md`):** this sprint now runs directly after Sprint 4 (Real-Time Collaborative Editing), not after the deferred Learning/Career Tracker sprints. Redis pub/sub already exists from Task 31 — Task 22 below adds Redis for general caching/rate-limiting instead, and Task 23 (RocketMQ) is now grounded in a real source of events: page edit/revision activity from Sprint 4.
-
-## Task 22: Add Redis Caching and Rate Limiting
-
-**Description:** Introduce Redis for specific, measurable use cases: caching frequently-read summaries and rate limiting auth-sensitive endpoints.
-
-**Acceptance criteria:**
-- [ ] Redis runs in Docker Compose.
-- [ ] At least one read-heavy endpoint uses cache-aside caching.
-- [ ] Cache invalidates when underlying data changes.
-- [ ] Login or write endpoints have basic rate limiting.
-
-**Verification:**
-- [ ] Tests pass: cache behavior tests where practical.
-- [ ] Build succeeds: `./mvnw package` or `mvn package`
-- [ ] Manual check: observe cache hit/miss logs locally.
-
-**Dependencies:** Tasks 12, 16, 19
-
-**Files likely touched:**
-- `configuration/cache`
-- `configuration/redis`
-- `workspace/application`
-- `knowledge/application`
-- `compose.yaml`
-
-**Estimated scope:** Medium: 3-5 files
+**Reprioritized (2026-09-13, see `tasks/plan.md`):** runs directly after Sprint 4 (Redis & Live Sessions), and does **not** wait on Task 32/33 (deferred polish) or Task 22 (general caching, moved to Sprint 6). RocketMQ needs a real event source to be worth building — it now gets one from features that already exist: page lifecycle activity (Tasks 7-9) and workspace membership changes (Task 13), rather than from the not-yet-built Learning/Career trackers the original Task 23 description assumed.
 
 ## Task 23: Add RocketMQ Domain Events
 
-**Description:** Add event publishing for meaningful domain events, such as page updated, study reminder due, application status changed, and notification requested.
+**Description:** Add event publishing for domain events that already happen today: page created, page content edited, page moved, page archived/unarchived, and workspace member added/updated/removed. (Originally scoped around Learning/Career Tracker events — those are deferred, so this is regrounded in events the app can actually produce right now.)
 
 **Acceptance criteria:**
 - [ ] RocketMQ runs in Docker Compose.
-- [ ] Domain events are published after successful transactions.
-- [ ] Consumers handle duplicate messages idempotently.
+- [ ] `PageServiceImpl` publishes an event after each successful create/update/move/archive transaction commits (not before — a rolled-back transaction must not publish).
+- [ ] `WorkspaceMemberServiceImpl` publishes an event after member create/update/delete.
+- [ ] Consumers handle duplicate/redelivered messages idempotently (e.g. dedupe on an event ID).
 
 **Verification:**
-- [ ] Tests pass: event publisher/consumer tests where practical.
+- [ ] Tests pass: event publisher/consumer tests, including a redelivery/duplicate case.
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
-- [ ] Manual check: trigger an event and observe consumer processing.
+- [ ] Manual check: edit/archive a page or add a member through HTTP, observe the event on the RocketMQ console/consumer log.
 
-**Dependencies:** Task 22
+**Dependencies:** Task 13 (membership events), Task 9 (page lifecycle events)
 
 **Files likely touched:**
-- `shared/events`
-- `configuration/messaging`
-- `knowledge/application`
-- `learning/application`
-- `career/application`
+- new `shared/events` (or `common/events`) module for the event payload types
+- `configuration/messaging` (RocketMQ producer config)
+- `page/application/impl/PageServiceImpl.java`
+- `workspace_members/app/WorkspaceMemberServiceImpl.java`
+- `compose.yaml` (add RocketMQ)
 
 **Estimated scope:** Medium: 3-5 files
 
 ## Task 24: Add Audit Records and Notification Records
 
-**Description:** Consume domain events into audit and notification modules. Store immutable audit records and user-visible notification records.
+**Description:** Consume the Task 23 domain events into an audit log (immutable, "what happened and when") and user-visible notification records (e.g. "your page was archived by X", "you were added to workspace Y").
 
 **Acceptance criteria:**
-- [ ] Important user actions create audit records.
-- [ ] Reminder and status events create notification records.
-- [ ] Event consumers are idempotent.
+- [ ] Every page/membership event from Task 23 creates an immutable audit record.
+- [ ] Membership changes (added/role changed/removed) create a notification record for the affected user.
+- [ ] Event consumers are idempotent (reprocessing the same event ID doesn't duplicate records).
 
 **Verification:**
-- [ ] Tests pass: audit/notification consumer tests.
+- [ ] Tests pass: audit/notification consumer tests, including a duplicate-delivery case.
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
-- [ ] Manual check: perform actions and inspect audit/notification tables.
+- [ ] Manual check: perform a page edit and a membership change through HTTP, inspect the resulting audit/notification rows.
 
 **Dependencies:** Task 23
 
@@ -764,6 +747,39 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - `notification/application`
 - `notification/infrastructure/persistence`
 - `src/main/resources/db/migration`
+
+**Estimated scope:** Medium: 3-5 files
+
+## Checkpoint: RocketMQ
+
+- [ ] Page and membership actions publish events after commit, not before.
+- [ ] Duplicate/redelivered events don't create duplicate audit or notification rows.
+- [ ] A reviewer can trigger an action via HTTP and see it show up in both the audit log and (where applicable) a notification record.
+
+## Sprint 6 (revised order): Redis Caching and Production Readiness
+
+**Reprioritized (2026-09-13, see `tasks/plan.md`):** general-purpose Redis usage (caching/rate-limiting) and observability move here, after the two features that actually needed Redis and RocketMQ to exist first.
+
+## Task 22: Add Redis Caching and Rate Limiting
+
+**Description:** Introduce Redis for specific, measurable use cases: caching frequently-read summaries and rate limiting auth-sensitive endpoints. (This reuses the same Redis instance introduced in Task 31 for pub/sub — a second, distinct use case, not a second Redis.)
+
+**Acceptance criteria:**
+- [ ] At least one read-heavy endpoint (e.g. `GET /api/workspaces`, `GET /api/{workspaceId}/pages/{pageId}/children`) uses cache-aside caching.
+- [ ] Cache invalidates when underlying data changes.
+- [ ] Login or write endpoints have basic rate limiting.
+
+**Verification:**
+- [ ] Tests pass: cache behavior tests where practical.
+- [ ] Build succeeds: `./mvnw package` or `mvn package`
+- [ ] Manual check: observe cache hit/miss logs locally.
+
+**Dependencies:** Task 31 (Redis already running from the pub/sub work), Task 12
+
+**Files likely touched:**
+- `configuration/cache`
+- `workspace/application`
+- `page/application`
 
 **Estimated scope:** Medium: 3-5 files
 
@@ -791,14 +807,12 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Medium: 3-5 files
 
-## Checkpoint: Enterprise Backend
+## Checkpoint: Production Readiness
 
 - [ ] Redis is used for caching/rate limiting with correct invalidation.
-- [ ] RocketMQ events are useful and idempotent.
-- [ ] Audit and notification flows work.
-- [ ] Local operations are debuggable.
+- [ ] Local operations are debuggable via logs and actuator endpoints.
 
-## Sprint 6 (revised order): Portfolio Hardening
+## Sprint 7 (revised order): Portfolio Hardening
 
 ## Task 26: Add API Documentation and Example Requests
 

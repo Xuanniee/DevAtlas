@@ -6,6 +6,9 @@ import com.xuannie.devatlas.workspace.common.command.CreateWorkspaceCommand;
 import com.xuannie.devatlas.workspace.common.enums.WorkspaceStatus;
 import com.xuannie.devatlas.workspace.domain.entity.Workspace;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class WorkspaceMapper {
     // Prevent construction since this is a static utility class
@@ -41,5 +44,13 @@ public class WorkspaceMapper {
             workspace.getHomePageId(),
             workspace.getCreatedAt()
         );
+    }
+
+    public static List<WorkspaceResponse> toResponseList(List<Workspace> workspaces) {
+        List<WorkspaceResponse> results = new ArrayList<>();
+        for (Workspace workspace: workspaces) {
+            results.add(WorkspaceMapper.toResponse(workspace));
+        }
+        return results;
     }
 }
