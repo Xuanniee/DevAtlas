@@ -15,6 +15,6 @@ public class WorkspaceMemberCommandBuilder {
     }
 
     public static DeleteWorkspaceMemberCommand from(Long executingUserId, Long workspaceId, Long targetUserId) {
-        return new DeleteWorkspaceMemberCommand(executingUserId, workspaceId, targetUserId);
+        return new DeleteWorkspaceMemberCommand(executingUserId, targetUserId, workspaceId);
     }
 }
