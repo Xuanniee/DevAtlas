@@ -69,7 +69,7 @@ public class WorkspaceServiceImplTest {
         }).when(pageRepository).insert(eq(ownerId), any(Page.class));
 
         // createWorkspace() re-fetches by id at the end — give it something to find
-        when(workspaceRepository.findByOwnerId(ownerId, 1L))
+        when(workspaceRepository.findByUserId(ownerId, 1L))
                 .thenAnswer(invocation -> Optional.of(insertedWorkspace.get()));
 
         // Act: Call exactly one method on the class we are testing, i.e. the business logic we want to test
@@ -125,7 +125,7 @@ public class WorkspaceServiceImplTest {
         // Arrange
         Long ownerId = 1L;
         Long workspaceId = 1L;
-        when(workspaceRepository.findByOwnerId(ownerId, workspaceId))
+        when(workspaceRepository.findByUserId(ownerId, workspaceId))
                 .thenReturn(Optional.empty());
 
         // Act + Assert
@@ -148,7 +148,7 @@ public class WorkspaceServiceImplTest {
                 .build();
 
         // Return the workspace if this method is called
-        when(workspaceRepository.findByOwnerId(ownerId, 1L))
+        when(workspaceRepository.findByUserId(ownerId, 1L))
                 .thenReturn(Optional.of(existingWorkspace));
 
         // Act - Call the Method

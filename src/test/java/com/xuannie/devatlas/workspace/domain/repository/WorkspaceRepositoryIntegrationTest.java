@@ -85,7 +85,7 @@ public class WorkspaceRepositoryIntegrationTest {
         assertThat(integrationTestWorkspace.getId()).isNotNull();
 
         Optional<Workspace> loaded =
-                workspaceRepository.findByOwnerId(ownerId, integrationTestWorkspace.getId());
+                workspaceRepository.findByUserId(ownerId, integrationTestWorkspace.getId());
 
         assertThat(loaded).isPresent();
         assertThat(loaded.get().getName())

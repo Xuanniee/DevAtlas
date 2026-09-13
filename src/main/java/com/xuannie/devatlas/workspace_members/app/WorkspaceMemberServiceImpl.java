@@ -26,10 +26,15 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
     @Override
     public WorkspaceMemberResponse create(CreateWorkspaceMemberCommand command) {
-        WorkspaceMember executingWorkspaceMember = WorkspaceMemberMapper.toExecutingEntity(command);
-        WorkspaceMember targetWorkspaceMember = this.workspaceMemberRepository.findByWorkspaceId(command.targetUserId(), command.workspaceId())
-                .orElseThrow(() -> new ExistingWorkspaceMemberException(command.targetUserId()));
-        targetWorkspaceMember = WorkspaceMemberMapper.toTargetEntity(command);
+        // The executing user must already be a member (with a real role) to grant one.
+        WorkspaceMember executingWorkspaceMember = this.workspaceMemberRepository.findByWorkspaceId(command.executingUserId(), command.workspaceId())
+                .orElseThrow(() -> new WorkspaceMemberNotFoundException(command.executingUserId(), command.workspaceId()));
+
+        // The target must NOT already have a role in this workspace.
+        this.workspaceMemberRepository.findByWorkspaceId(command.targetUserId(), command.workspaceId())
+                .ifPresent(existing -> { throw new ExistingWorkspaceMemberException(command.targetUserId()); });
+
+        WorkspaceMember targetWorkspaceMember = WorkspaceMemberMapper.toTargetEntity(command);
 
         // Executing User must be min admin to give a role and role given at most equal executing user
         if (!executingWorkspaceMember.getRole().isAtLeast(WorkspaceMemberRole.ADMIN) ||

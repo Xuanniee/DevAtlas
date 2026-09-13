@@ -10,7 +10,7 @@
         <result property="name" column="name"/>
         <result property="workspaceId" column="workspace_id"/>
         <result property="parentId" column="parent_id"/>
-        <result property="userId" column="owner_id"/>
+        <result property="ownerId" column="owner_id"/>
         <result property="content" column="content"/>
         <result property="archived" column="archived"/>
         <result property="createdAt" column="created_at"/>
@@ -58,7 +58,7 @@
     <!-- useGeneratedKeys="true" returns the generated primary key -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="page.id" parameterType="com.xuannie.devatlas.page.domain.model.Page">
         INSERT INTO pages (name, workspace_id, parent_id, owner_id, content)
-        VALUES (#{page.name}, #{page.workspaceId}, #{page.parentId}, #{page.userId}, #{page.content});
+        VALUES (#{page.name}, #{page.workspaceId}, #{page.parentId}, #{page.ownerId}, #{page.content});
     </insert>
 
     <!-- Can update workspace_id since we can move pages eventually but not rootPage -->
@@ -89,13 +89,13 @@
         ON p.parent_id = parent.id
         WHERE p.archived = TRUE
         AND (p.parent_id IS NULL OR parent.archived = FALSE)
-        AND owner_id = #{userId};
+        AND p.owner_id = #{userId};
     </select>
 
     <select id="findByArchivedId" resultMap="PageResultMap">
         SELECT *
         FROM pages
-        WHERE id = #{pageId}
+        WHERE id = #{archivedPageId}
         AND archived = TRUE
         AND owner_id = #{userId};
     </select>
