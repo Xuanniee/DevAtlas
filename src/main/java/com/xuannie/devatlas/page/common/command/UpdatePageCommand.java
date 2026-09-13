@@ -7,6 +7,7 @@ public record UpdatePageCommand(
         Long pageId,
         String name,
         String content,
-        Long ownerId,
+        Long userId,
+        Long workspaceId,
         String updateNote
 ) implements Command {}

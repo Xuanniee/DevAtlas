@@ -13,9 +13,8 @@
         <result property="status" column="status"/>
         <result property="visibility" column="visibility"/>
         <result property="category" column="category"/>
-        <result property="permissions" column="permissions"/>
         <result property="homePageId" column="root_page_id"/>
-        <result property="ownerId" column="owner_id"/>
+        <result property="userId" column="owner_id"/>
         <result property="createdAt" column="created_at"/>
         <result property="modifiedAt" column="modified_at"/>
         <result property="archivedAt" column="archived_at"/>
@@ -23,28 +22,28 @@
 
     <insert id="insert" parameterType="com.xuannie.devatlas.workspace.domain.entity.Workspace"
             useGeneratedKeys="true" keyProperty="workspace.id">
-        INSERT INTO workspaces (name, slug, description, status, visibility, category, permissions, root_page_id,
+        INSERT INTO workspaces (name, slug, description, status, visibility, category, root_page_id,
         owner_id)
-        VALUES (#{workspace.name}, #{workspace.slug}, #{workspace.description}, #{workspace.status}, #{workspace.visibility}, #{workspace.category}, #{workspace.permissions},
-        #{workspace.homePageId}, #{ownerId})
+        VALUES (#{workspace.name}, #{workspace.slug}, #{workspace.description}, #{workspace.status}, #{workspace.visibility}, #{workspace.category},
+        #{workspace.homePageId}, #{userId})
     </insert>
 
-    <select id="findByOwnerId" resultMap="WorkspaceResultMap">
+    <select id="findByUserId" resultMap="WorkspaceResultMap">
         SELECT *
         FROM workspaces
-        WHERE owner_id = #{ownerId}
+        WHERE owner_id = #{userId}
         AND id = #{workspaceId};
     </select>
 
     <select id="findByOwnerSlug" resultMap="WorkspaceResultMap">
         SELECT *
         FROM workspaces
-        WHERE owner_id = #{ownerId}
+        WHERE owner_id = #{userId}
         AND slug = #{slug};
     </select>
 
     <select id="findAll" resultMap="WorkspaceResultMap">
-        SELECT * FROM workspaces WHERE owner_id = #{ownerId} ORDER BY name ASC;
+        SELECT * FROM workspaces WHERE owner_id = #{userId} ORDER BY name ASC;
     </select>
 
     <select id="existsById" resultType="boolean">
@@ -62,17 +61,16 @@
             <if test="workspace.homePageId != null">root_page_id = #{workspace.homePageId}, </if>
             <if test="workspace.visibility != null">visibility = #{workspace.visibility}, </if>
             <if test="workspace.category != null">category = #{workspace.category}, </if>
-            <if test="workspace.permissions != null">permissions = #{workspace.permissions}, </if>
             <if test="workspace.archivedAt != null">archived_at = #{workspace.archivedAt}, </if>
         </set>
         WHERE id = #{workspace.id}
-        AND owner_id = #{ownerId};
+        AND owner_id = #{userId};
     </update>
 
     <delete id="delete">
         DELETE FROM workspaces
         WHERE id = #{workspaceId}
-        AND owner_id = #{ownerId};
+        AND owner_id = #{userId};
     </delete>
 
     <update id="clearArchivedAt">
@@ -80,14 +78,14 @@
     </update>
 
     <select id="existsBySlug" resultType="boolean">
-        SELECT EXISTS(SELECT 1 FROM workspaces WHERE owner_id = #{ownerId} AND slug = #{slug})
+        SELECT EXISTS(SELECT 1 FROM workspaces WHERE owner_id = #{userId} AND slug = #{slug})
     </select>
 
     <select id="isExistingWorkspaceNameByOwner" resultType="boolean">
         SELECT EXISTS(
             SELECT 1
             FROM workspaces
-            WHERE owner_id = #{ownerId}
+            WHERE owner_id = #{userId}
                 AND name = #{name}
         )
     </select>

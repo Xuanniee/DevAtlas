@@ -25,9 +25,7 @@ public class PageRevisionController {
             @AuthenticationPrincipal Long ownerId,
             @Valid @RequestBody CreatePageRevisionRequest request
     ) {
-        // TODO Translate the Request into a Query/Command
         CreatePageRevisionCommand command = PageRevisionCommandBuilder.from(ownerId, request);
-
         return this.pageRevisionService.create(command);
     }
 

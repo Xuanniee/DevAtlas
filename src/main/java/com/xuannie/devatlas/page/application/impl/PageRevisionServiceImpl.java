@@ -20,18 +20,18 @@ public class PageRevisionServiceImpl implements PageRevisionService {
     @Override
     public PageRevisionResponse create(CreatePageRevisionCommand command) {
         // Determine the revision number dynamically
-        int revisionNumber = this.pageRevisionRepository.getNextRevision(command.ownerId(), command.pageId());
+        int revisionNumber = this.pageRevisionRepository.getNextRevision(command.userId(), command.pageId());
 
         // Create a Page Revision Object from the request and insert it in DB
         PageRevision revision = PageRevisionMapper.toEntity(command, revisionNumber);
-        this.pageRevisionRepository.insert(command.ownerId(), revision);
+        this.pageRevisionRepository.insert(command.userId(), revision);
 
         return PageRevisionMapper.toResponse(revision);
     }
 
     @Override
     public List<PageRevisionResponse> findAllByPageId(RetrievePageRevisionsQuery query) {
-        List<PageRevision> revisions = this.pageRevisionRepository.findAllByPageId(query.ownerId(), query.pageId());
+        List<PageRevision> revisions = this.pageRevisionRepository.findAllByPageId(query.userId(), query.pageId());
 
         return PageRevisionMapper.toResponseList(revisions);
 

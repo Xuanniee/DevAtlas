@@ -6,7 +6,6 @@ CREATE TABLE workspaces (
     status          VARCHAR(20) NOT NULL,                                   -- Indicates whether workspace is still used
     visibility      VARCHAR(20) NOT NULL,                                   -- Determines who can see this workspace
     category        VARCHAR(20) NOT NULL,                                   -- Determines the workspace type
-    permissions     VARCHAR(20) NOT NULL,                                   -- Determine the roles this workspace support
     root_page_id    BIGINT,                                                 -- The first page this workspace sees
     owner_id        BIGINT NOT NULL,
     created_at      DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),

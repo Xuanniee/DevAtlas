@@ -10,6 +10,7 @@ import com.xuannie.devatlas.workspace.domain.entity.Workspace;
 import java.util.List;
 
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,24 +24,22 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/workspaces")
 public class WorkspaceController {
-
-    private final WorkspaceService workspaceService;
-
-    WorkspaceController(WorkspaceService workspaceService) {
-        this.workspaceService = workspaceService;
-    }
+    @Autowired
+    private WorkspaceService workspaceService;
 
     @GetMapping
-    public List<Workspace> listAllWorkspaces(@AuthenticationPrincipal Long ownerId) {
-        return workspaceService.listAllWorkspaces(ownerId);
+    public List<Workspace> listAllWorkspaces(
+            @AuthenticationPrincipal Long userId
+    ) {
+        return workspaceService.listAllWorkspaces(userId);
     }
 
     @GetMapping("/{workspaceId}")
     public ResponseEntity<WorkspaceResponse> getWorkspace(
             @PathVariable Long workspaceId,
-            @AuthenticationPrincipal Long ownerId
+            @AuthenticationPrincipal Long userId
     ) {
-        WorkspaceResponse response = workspaceService.getWorkspaceById(ownerId, workspaceId);
+        WorkspaceResponse response = workspaceService.getWorkspaceById(userId, workspaceId);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(response);
@@ -48,11 +47,11 @@ public class WorkspaceController {
 
     @PostMapping
     public ResponseEntity<WorkspaceResponse> createWorkspace(
-            @AuthenticationPrincipal Long ownerId,
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody CreateWorkspaceRequest request
     ) {
         CreateWorkspaceCommand command = WorkspaceCommandBuilder.from(request);
-        WorkspaceResponse response = workspaceService.createWorkspace(ownerId, command);
+        WorkspaceResponse response = workspaceService.createWorkspace(userId, command);
         // Return if no exceptions are thrown
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

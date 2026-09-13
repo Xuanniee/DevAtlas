@@ -19,7 +19,7 @@ public class UpdatePageRequest {
     private String name;
 
     // For changing users, which is not always the case, so can be null
-    private Long ownerId;
+    private Long userId;
 
     // Can be null or empty
     private String content;
@@ -29,9 +29,9 @@ public class UpdatePageRequest {
     @NotNull(message = "updateNote cannot be null, only empty")
     private String updateNote;
 
-    public UpdatePageRequest(String name, Long ownerId, String content, String updateNote) {
+    public UpdatePageRequest(String name, Long userId, String content, String updateNote) {
         this.name = name;
-        this.ownerId = ownerId;
+        this.userId = userId;
         this.content = content;
         this.updateNote = updateNote;
     }

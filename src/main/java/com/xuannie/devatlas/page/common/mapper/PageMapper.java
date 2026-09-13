@@ -17,7 +17,7 @@ public class PageMapper {
                 .name(command.name())
                 .workspaceId(workspaceId)
                 .parentId(command.parentId())
-                .ownerId(command.ownerId())
+                .ownerId(command.userId())
                 .content(command.content())
                 .build();
     }

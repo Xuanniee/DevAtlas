@@ -17,6 +17,13 @@ import com.xuannie.devatlas.page.common.utils.MoveUtils;
 import com.xuannie.devatlas.page.domain.model.Page;
 import com.xuannie.devatlas.page.domain.repository.PageRepository;
 import com.xuannie.devatlas.page.domain.repository.PageRevisionRepository;
+import com.xuannie.devatlas.workspace_members.common.constants.WorkspaceMemberConstant;
+import com.xuannie.devatlas.workspace_members.common.enums.WorkspaceMemberRole;
+import com.xuannie.devatlas.workspace_members.common.exception.UnauthorisedWorkspaceMemberException;
+import com.xuannie.devatlas.workspace_members.common.exception.WorkspaceMemberNotFoundException;
+import com.xuannie.devatlas.workspace_members.common.utils.MembershipRoleUtils;
+import com.xuannie.devatlas.workspace_members.domain.model.WorkspaceMember;
+import com.xuannie.devatlas.workspace_members.domain.repository.WorkspaceMemberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,34 +38,44 @@ public class PageServiceImpl implements PageService {
     private PageRepository pageRepository;
     @Autowired
     private PageRevisionService pageRevisionService;
+    @Autowired
+    private WorkspaceMemberRepository workspaceMemberRepository;
 
     @Override
     public PageResponse createPage(CreatePageCommand command) {
+        // Verify user has the role permission to create a Page, i.e. min Admin
+        MembershipRoleUtils.validateOperationByRole(
+                this.workspaceMemberRepository,
+                command.userId(),
+                command.workspaceId(),
+                WorkspaceMemberRole.ADMIN,
+                WorkspaceMemberConstant.CREATE_PAGE_OPERATION
+        );
+
         // Determine Page Name
         String pageName = "Untitled";
         if (command.name() != null) {
             pageName = command.name();
         }
-        if (!pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(command.ownerId(), command.parentId(), pageName)) {
+        if (!pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(command.userId(), command.parentId(), pageName)) {
             throw new RootPageAlreadyExistsException(command.name());
         }
         int counter = 1;
-        while (pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(command.ownerId(), command.parentId(), pageName)) {
+        while (pageName.equals("Untitled") & this.pageRepository.isExistingSiblingPageByParentPage(command.userId(), command.parentId(), pageName)) {
             // Means already has an untitled page
             pageName = "Untitled " + counter;
             counter += 1;
         }
 
         // Derive the Workspace from the Parent/Root Page
-        Page parentPage = this.pageRepository.findById(command.ownerId(), command.parentId())
+        Page parentPage = this.pageRepository.findById(command.userId(), command.parentId())
                 .orElseThrow(() -> new PageNotFoundException(command.parentId()));
 
         // PageId used in URL for pages instead of slugs
         Page page = PageMapper.toEntity(command, parentPage.getWorkspaceId());
         page.setName(pageName);
 
-
-        this.pageRepository.insert(command.ownerId(), page);
+        this.pageRepository.insert(command.userId(), page);
         return PageMapper.toResponse(page);
     }
 
@@ -71,8 +88,17 @@ public class PageServiceImpl implements PageService {
      */
     @Override
     public List<PageResponse> findAll(RetrievePageQuery command) {
+        // Verify user has the role permission to read Page
+        MembershipRoleUtils.validateOperationByRole(
+                this.workspaceMemberRepository,
+                command.userId(),
+                command.workspaceId(),
+                WorkspaceMemberRole.VIEWER,
+                WorkspaceMemberConstant.READ_PAGE_OPERATION
+        );
+
         // The page is the parent
-        List<Page> childrenPages = this.pageRepository.findAll(command.ownerId(), command.pageId());
+        List<Page> childrenPages = this.pageRepository.findAll(command.userId(), command.pageId());
 
         return PageMapper.toResponseList(childrenPages);
     }
@@ -84,7 +110,16 @@ public class PageServiceImpl implements PageService {
      */
     @Override
     public PageResponse getPageById(RetrievePageQuery command) {
-        Page page = this.pageRepository.findById(command.ownerId(), command.pageId())
+        // Verify user has the role permission to read Page
+        MembershipRoleUtils.validateOperationByRole(
+                this.workspaceMemberRepository,
+                command.userId(),
+                command.workspaceId(),
+                WorkspaceMemberRole.VIEWER,
+                WorkspaceMemberConstant.READ_PAGE_OPERATION
+        );
+
+        Page page = this.pageRepository.findById(command.userId(), command.pageId())
                 .orElseThrow(() -> new PageNotFoundException(command.pageId()));
 
         return PageMapper.toResponse(page);
@@ -93,56 +128,72 @@ public class PageServiceImpl implements PageService {
     @Override
     public PageResponse movePage(MovePageCommand command) {
         // Retrieve the target page
-        Page page = this.pageRepository.findById(command.ownerId(), command.currentPageId())
+        Page page = this.pageRepository.findById(command.userId(), command.currentPageId())
                 .orElseThrow(() -> new PageNotFoundException(command.currentPageId()));
+        // Verify user has the role permission in same workspace
+        MembershipRoleUtils.validateOperationByRole(
+                this.workspaceMemberRepository,
+                command.userId(),
+                page.getWorkspaceId(),
+                WorkspaceMemberRole.ADMIN,
+                WorkspaceMemberConstant.MOVE_PAGE_OPERATION
+        );
 
         // Retrieve the New Parent Page
         Long newParentId = command.targetPageId();
-        Page newParentPage = this.pageRepository.findById(command.ownerId(), newParentId)
+        Page newParentPage = this.pageRepository.findById(command.userId(), newParentId)
                 .orElseThrow(() -> new PageNotFoundException(newParentId));
 
         // Check if there are cycles caused by moving this page to the new parent
-        if (MoveUtils.wouldCreatePageMoveCycles(command.ownerId(), command.currentPageId(), newParentPage, this.pageRepository)) {
+        if (MoveUtils.wouldCreatePageMoveCycles(command.userId(), command.currentPageId(), newParentPage, this.pageRepository)) {
             // A cycle will form
             throw new CyclicPageMoveException(command.currentPageId(), newParentId);
         }
 
         // Check if same or different workspace
         if (!page.getWorkspaceId().equals(newParentPage.getWorkspaceId())) {
-            // New Workspace
+            // Verify have permission in new workspace
+            MembershipRoleUtils.validateOperationByRole(
+                    this.workspaceMemberRepository,
+                    command.userId(),
+                    newParentPage.getWorkspaceId(),
+                    WorkspaceMemberRole.ADMIN,
+                    WorkspaceMemberConstant.MOVE_PAGE_OPERATION
+            );
+            // Update page to new workspace
             page.setWorkspaceId(newParentPage.getWorkspaceId());
         }
+
         // Update Parent
         page.setParentId(newParentId);
 
         // Update the page
-        this.pageRepository.update(command.ownerId(), page);
+        this.pageRepository.update(command.userId(), page);
         return PageMapper.toResponse(page);
     }
 
     @Transactional
     @Override
     public PageResponse update(UpdatePageCommand command) {
+        MembershipRoleUtils.validateOperationByRole(
+                this.workspaceMemberRepository,
+                command.userId(),
+                command.workspaceId(),
+                WorkspaceMemberRole.EDITOR,
+                WorkspaceMemberConstant.EDIT_PAGE_OPERATION
+        );
+
         // Create an UpdatePage Object and populate fields from the request
-        Page updatePage = this.pageRepository.findById(command.ownerId(), command.pageId())
+        Page updatePage = this.pageRepository.findById(command.userId(), command.pageId())
                 .orElseThrow(() -> new PageNotFoundException(command.pageId()));
 
         PatchUtils.ifPresent(command.name(), updatePage::setName);
-        PatchUtils.ifPresent(command.ownerId(), updatePage::setOwnerId);
+        PatchUtils.ifPresent(command.userId(), updatePage::setOwnerId);
         PatchUtils.ifPresent(command.content(), updatePage::setContent);
-//        if (command.name() != null) {
-//            updatePage.setName(command.name());
-//        }
-//        if (command.ownerId() != null) {
-//            updatePage.setOwnerId(command.ownerId());
-//        }
-//        if (command.content() != null) {
-//            updatePage.setContent(command.content());
-//        }
 
         // Update Page, then create revision
-        this.pageRepository.update(command.ownerId(), updatePage);
-        CreatePageRevisionCommand revisionCommand = PageRevisionCommandBuilder.from(command.ownerId(), new CreatePageRevisionRequest(
+        this.pageRepository.update(command.userId(), updatePage);
+        CreatePageRevisionCommand revisionCommand = PageRevisionCommandBuilder.from(command.userId(), new CreatePageRevisionRequest(
                 updatePage.getId(),
                 updatePage.getName(),
                 updatePage.getContent(),
@@ -166,7 +217,15 @@ public class PageServiceImpl implements PageService {
      */
     @Transactional
     @Override
-    public PageResponse archive(Long ownerId, Long pageId, ArchivePageRequest request) {
+    public PageResponse archive(Long userId, Long workspaceId, Long pageId, ArchivePageRequest request) {
+        MembershipRoleUtils.validateOperationByRole(
+                this.workspaceMemberRepository,
+                userId,
+                workspaceId,
+                WorkspaceMemberRole.ADMIN,
+                WorkspaceMemberConstant.ARCHIVE_PAGE_OPERATION
+        );
+
         // Create a queue to store all the pages we need to archive/unarchive
         boolean archived = request.isArchived();
         Queue<Page> queue = new ArrayDeque<>();
@@ -175,10 +234,10 @@ public class PageServiceImpl implements PageService {
         // Find the archive root or page to be archived
         if (archived) {
             // Wants to archive
-            parentPage = this.pageRepository.findById(ownerId, pageId)
+            parentPage = this.pageRepository.findById(userId, pageId)
                     .orElseThrow(() -> new PageNotFoundException(pageId));
         } else {
-            parentPage = this.pageRepository.findByArchivedId(ownerId, pageId)
+            parentPage = this.pageRepository.findByArchivedId(userId, pageId)
                     .orElseThrow(() -> new ArchivedPageNotFoundException(pageId));
         }
         queue.add(parentPage);
@@ -188,15 +247,15 @@ public class PageServiceImpl implements PageService {
             Page currPage = queue.poll();
             if (archived) {
                 // Archive page and add children
-                ArchiveUtils.archivePage(ownerId, currPage, this.pageRepository);
-                queue.addAll(this.pageRepository.findAll(ownerId, currPage.getId()));
+                ArchiveUtils.archivePage(userId, currPage, this.pageRepository);
+                queue.addAll(this.pageRepository.findAll(userId, currPage.getId()));
             } else {
                 // Unarchive page and add children
-                ArchiveUtils.unarchivePage(ownerId, currPage, this.pageRepository);
+                ArchiveUtils.unarchivePage(userId, currPage, this.pageRepository);
                 // Reset the archived_at timestamp
-                this.pageRepository.resetArchivedDatetime(ownerId, currPage.getId());
+                this.pageRepository.resetArchivedDatetime(userId, currPage.getId());
                 currPage.setArchivedAt(null);
-                queue.addAll(this.pageRepository.findAllArchivedChildren(ownerId, currPage.getId()));
+                queue.addAll(this.pageRepository.findAllArchivedChildren(userId, currPage.getId()));
             }
         }
 
@@ -204,30 +263,50 @@ public class PageServiceImpl implements PageService {
     }
 
     @Override
-    public List<PageResponse> findAllArchived(Long ownerId) {
-        // Retrieve all the Archive Root Pages
-        List<Page> archiveRoots = this.pageRepository.findAllArchivedPages(ownerId);
+    public List<PageResponse> findAllArchived(Long userId, Long workspaceId) {
+        MembershipRoleUtils.validateOperationByRole(
+                this.workspaceMemberRepository,
+                userId,
+                workspaceId,
+                WorkspaceMemberRole.ADMIN,
+                WorkspaceMemberConstant.FIND_ARCHIVE_PAGE_OPERATION
+        );
 
+        // Retrieve all the Archive Root Pages
+        List<Page> archiveRoots = this.pageRepository.findAllArchivedPages(userId);
         return PageMapper.toResponseList(archiveRoots);
     }
 
     @Override
-    public PageResponse findArchivedById(Long ownerId, Long pageId) {
-        Page archivedPage = this.pageRepository.findByArchivedId(ownerId, pageId)
-                .orElseThrow(() -> new ArchivedPageNotFoundException(pageId));
+    public PageResponse findArchivedById(Long userId, Long workspaceId, Long pageId) {
+        MembershipRoleUtils.validateOperationByRole(
+                this.workspaceMemberRepository,
+                userId,
+                workspaceId,
+                WorkspaceMemberRole.ADMIN,
+                WorkspaceMemberConstant.FIND_ARCHIVE_PAGE_OPERATION
+        );
 
+        Page archivedPage = this.pageRepository.findByArchivedId(userId, pageId)
+                .orElseThrow(() -> new ArchivedPageNotFoundException(pageId));
         return PageMapper.toResponse(archivedPage);
     }
 
     @Override
-    public List<PageResponse> findAllArchivedChildren(Long ownerId, Long pageId) {
-        Page archivedPage = this.pageRepository.findByArchivedId(ownerId, pageId)
+    public List<PageResponse> findAllArchivedChildren(Long userId, Long workspaceId, Long pageId) {
+        MembershipRoleUtils.validateOperationByRole(
+                this.workspaceMemberRepository,
+                userId,
+                workspaceId,
+                WorkspaceMemberRole.ADMIN,
+                WorkspaceMemberConstant.FIND_ARCHIVE_PAGE_OPERATION
+        );
+
+        Page archivedPage = this.pageRepository.findByArchivedId(userId, pageId)
                 .orElseThrow(() -> new ArchivedPageNotFoundException(pageId));
 
         // If reach here, means must be archived
-        List<Page> archivedChildren = this.pageRepository.findAllArchivedChildren(ownerId, pageId);
+        List<Page> archivedChildren = this.pageRepository.findAllArchivedChildren(userId, pageId);
         return PageMapper.toResponseList(archivedChildren);
     }
-
-
 }

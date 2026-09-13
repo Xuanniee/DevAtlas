@@ -9,11 +9,9 @@ import java.util.List;
 
 public interface WorkspaceService {
 
-    List<Workspace> listAllWorkspaces(Long ownerId);
+    List<Workspace> listAllWorkspaces(Long userId);
 
-    WorkspaceResponse getWorkspaceById(Long ownerId, Long workspaceId);
+    WorkspaceResponse getWorkspaceById(Long userId, Long workspaceId);
 
-    WorkspaceResponse createWorkspace(Long ownerId, CreateWorkspaceCommand command);
-
-
+    WorkspaceResponse createWorkspace(Long userId, CreateWorkspaceCommand command);
 }

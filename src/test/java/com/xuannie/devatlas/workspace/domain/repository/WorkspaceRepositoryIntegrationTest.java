@@ -1,7 +1,6 @@
 package com.xuannie.devatlas.workspace.domain.repository;
 
 import com.xuannie.devatlas.workspace.common.enums.WorkspaceCategory;
-import com.xuannie.devatlas.workspace.common.enums.WorkspacePermissions;
 import com.xuannie.devatlas.workspace.common.enums.WorkspaceStatus;
 import com.xuannie.devatlas.workspace.common.enums.WorkspaceVisibility;
 import com.xuannie.devatlas.workspace.domain.entity.Workspace;
@@ -75,7 +74,6 @@ public class WorkspaceRepositoryIntegrationTest {
             WorkspaceCategory.PERSONAL,
             null,
             ownerId,
-            WorkspacePermissions.ADMIN,
             LocalDateTime.now(),
             LocalDateTime.now(),
             null

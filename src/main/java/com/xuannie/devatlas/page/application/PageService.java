@@ -17,12 +17,12 @@ public interface PageService {
 
     PageResponse update(UpdatePageCommand command);
 
-    PageResponse archive(Long ownerId, Long pageId, ArchivePageRequest request);
+    PageResponse archive(Long userId, Long workspaceId, Long pageId, ArchivePageRequest request);
 
     // Every Archived Root Page is identified by archived is true, and the parent is either null or not archived
-    List<PageResponse> findAllArchived(Long ownerId);
+    List<PageResponse> findAllArchived(Long userId, Long workspaceId);
 
-    PageResponse findArchivedById(Long ownerId, Long pageId);
+    PageResponse findArchivedById(Long userId, Long workspaceId, Long pageId);
 
-    List<PageResponse> findAllArchivedChildren(Long ownerId, Long pageId);
+    List<PageResponse> findAllArchivedChildren(Long userId, Long workspaceId, Long pageId);
 }

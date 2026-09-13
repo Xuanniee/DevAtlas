@@ -3,7 +3,6 @@ package com.xuannie.devatlas.workspace.common.mapper;
 import com.xuannie.devatlas.workspace.api.request.CreateWorkspaceRequest;
 import com.xuannie.devatlas.workspace.api.response.WorkspaceResponse;
 import com.xuannie.devatlas.workspace.common.command.CreateWorkspaceCommand;
-import com.xuannie.devatlas.workspace.common.enums.WorkspacePermissions;
 import com.xuannie.devatlas.workspace.common.enums.WorkspaceStatus;
 import com.xuannie.devatlas.workspace.domain.entity.Workspace;
 
@@ -26,7 +25,6 @@ public class WorkspaceMapper {
                 .visibility(command.visibility())
                 .category(command.category())
                 .ownerId(ownerId)
-                .permissions(WorkspacePermissions.ADMIN)
                 .build();
     }
 

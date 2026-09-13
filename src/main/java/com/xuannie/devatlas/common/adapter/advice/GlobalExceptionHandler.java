@@ -2,6 +2,7 @@ package com.xuannie.devatlas.common.adapter.advice;
 
 import com.xuannie.devatlas.common.error.ConflictException;
 import com.xuannie.devatlas.common.error.ErrorResponseFactory;
+import com.xuannie.devatlas.common.error.ForbiddenException;
 import com.xuannie.devatlas.common.error.NotFoundException;
 import com.xuannie.devatlas.workspace.common.exceptions.WorkspaceAlreadyExistsException;
 import com.xuannie.devatlas.workspace.common.exceptions.WorkspaceNotFoundException;
@@ -60,6 +61,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ProblemDetail handleConflict(ConflictException exception) {
         return ErrorResponseFactory.of(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ProblemDetail handleForbidden(Exception exception) {
+        return ErrorResponseFactory.of(HttpStatus.UNAUTHORIZED, exception.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

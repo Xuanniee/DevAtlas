@@ -9,17 +9,17 @@ import java.util.List;
 @Mapper
 public interface PageRevisionRepository {
     int getNextRevision(
-            @Param("ownerId") Long ownerId,
+            @Param("userId") Long userId,
             @Param("pageId") Long pageId
     );
 
     void insert(
-            @Param("ownerId") Long ownerId,
+            @Param("userId") Long userId,
             @Param("pageRevision") PageRevision pageRevision
     );
 
     List<PageRevision> findAllByPageId(
-            @Param("ownerId") Long ownerId,
+            @Param("userId") Long userId,
             @Param("pageId") Long pageId
     );
 }

@@ -337,14 +337,14 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 **Description:** Add membership records and role checks so workspaces can later support private notes, shared career boards, or collaboration without redesign.
 
 **Acceptance criteria:**
-- [ ] Workspace owner is automatically a member.
-- [ ] Membership roles support at least owner and member.
-- [ ] Role checks protect write operations.
+- [x] Workspace owner is automatically a member. Confirmed (2026-09-13): `WorkspaceServiceImpl.createWorkspace` inserts a `WorkspaceMember` row with role `OWNER` in the same `@Transactional` method that creates the workspace and root page.
+- [x] Membership roles support at least owner and member. Confirmed (2026-09-13): `WorkspaceMemberRole` enum has `VIEWER`, `EDITOR`, `ADMIN`, `OWNER` with an `accessLevel` int and `isAtLeast`/`isAtMost`/`isLessThan` comparison helpers.
+- [x] Role checks protect write operations. Confirmed (2026-09-13): `MembershipRoleUtils.validateOperationByRole` is now called from `PageServiceImpl` (create/read/move/update/archive/find-archived) and `WorkspaceServiceImpl`/`WorkspaceMemberServiceImpl`, each requiring a minimum role per operation. **Caveat found while checking:** `GlobalExceptionHandler` has two `@ExceptionHandler(Exception.class)` methods (`handleUnexpected` and `handleForbidden`) mapped to the same exception type on the same class — an ambiguous mapping, so `UnauthorisedWorkspaceMemberException` (which extends the generic `Exception` bucket via `ForbiddenException` → `ApplicationException`) isn't guaranteed to route to the intended 401/403 handler. Not fixed — flagging per the "don't silently fix" rule.
 
 **Verification:**
-- [ ] Tests pass: membership service and authorization tests.
-- [ ] Build succeeds: `./mvnw package` or `mvn package`
-- [ ] Manual check: verify owner-only and member-allowed operations.
+- [ ] Tests pass: membership service and authorization tests. Still no tests exist anywhere for `workspace_members` (checked 2026-09-13) — nothing to run.
+- [ ] Build succeeds: `./mvnw package` or `mvn package`. Currently **fails** (2026-09-13): `mvn clean compile` errors on `PageMapper.java:20` — `CreatePageCommand` no longer has an `ownerId()` method, from an in-progress `ownerId` → `userId` rename across controllers/commands that hasn't been finished everywhere yet. This is in-progress work, not touched.
+- [ ] Manual check: verify owner-only and member-allowed operations. Not done — can't run the app to test this while the build is broken.
 
 **Dependencies:** Task 12
 
@@ -356,15 +356,176 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Medium: 3-5 files
 
+## Task 14: Add Email Verification via One-Time Code
+
+**Status:** Deferred (2026-09-13) — moved to the backlog in `tasks/plan.md`. Not core to a Confluence-clone portfolio scope; revisit after Sprint 6 (Portfolio Hardening) if there's time.
+
+**Description:** After registration, require the user to verify their email address using a short-lived, single-use code before the account is treated as fully active. Unverified accounts should still be able to log in (so the user isn't locked out), but verification status should be checkable by other parts of the app for later gating decisions.
+
+**Acceptance criteria:**
+- [ ] Registering a user generates a one-time verification code and (at minimum) logs/returns it for local development, without a real email provider wired up yet.
+- [ ] The code is short-lived (expires after a fixed window) and single-use (can't be replayed after a successful verification).
+- [ ] A verification endpoint marks the user's email as verified when given a valid, unexpired code for that user.
+- [ ] An expired or already-used code is rejected with a clear error, not a generic 500.
+- [ ] A user can request a new code if theirs expired (rate-limit or cooldown this later if it becomes a real concern; not required for this task).
+
+**Verification:**
+- [ ] Tests pass: verification service tests covering valid, expired, and already-used code cases.
+- [ ] Build succeeds: `./mvnw package` or `mvn package`
+- [ ] Manual check: register a user, verify with the generated code, confirm `email_verified` flips to true; confirm reusing the same code afterward fails.
+
+**Dependencies:** Task 11
+
+**Files likely touched:**
+- `user/domain`
+- `user/application`
+- `user/adapter`
+- `src/main/resources/db/migration` (new column/table for verification codes, or a column on `users` for verification status)
+
+**Estimated scope:** Medium: 3-5 files
+
+## Task 15: Add Forgot Password / Password Reset Flow
+
+**Status:** Deferred (2026-09-13) — moved to the backlog in `tasks/plan.md`, alongside Task 14. Not core to a Confluence-clone portfolio scope.
+
+**Description:** Let a user who forgot their password request a reset without being logged in, using a short-lived one-time token/code, then set a new password. Reuses the same "generate a short-lived single-use secret, validate it, consume it" shape as Task 14's email verification — worth building the second one deliberately similarly to the first, rather than as an unrelated one-off.
+
+**Acceptance criteria:**
+- [ ] A user can request a password reset by email, which generates a short-lived, single-use reset token (at minimum logged/returned for local dev, no real email provider yet).
+- [ ] The reset endpoint accepts the token and a new password, hashes it the same way registration does, and invalidates the token afterward.
+- [ ] An expired or already-used token is rejected with a clear error, not a generic 500.
+- [ ] Requesting a reset for an email that doesn't exist doesn't reveal whether that email is registered (avoid leaking account existence — same reasoning as the 404-vs-403 ownership decision from Task 12).
+- [ ] After a successful reset, existing JWTs issued before the reset should ideally no longer be treated as trustworthy forever (this may be a stretch goal depending on whether token invalidation/blacklisting exists yet — note as a known limitation if skipped).
+
+**Verification:**
+- [ ] Tests pass: reset-request and reset-confirmation service tests covering valid, expired, already-used, and unknown-email cases.
+- [ ] Build succeeds: `./mvnw package` or `mvn package`
+- [ ] Manual check: request a reset, use the generated token to set a new password, log in with the new password, confirm the old password no longer works.
+
+**Dependencies:** Task 11, Task 14 (shares the short-lived-code pattern; build after email verification so the pattern is established once, not reinvented)
+
+**Files likely touched:**
+- `user/domain`
+- `user/application`
+- `user/adapter`
+- `src/main/resources/db/migration` (new table/column for reset tokens)
+
+**Estimated scope:** Medium: 3-5 files
+
 ## Checkpoint: Security
 
 - [ ] Authentication works.
 - [ ] Ownership and membership checks are enforced.
 - [ ] Security behavior has automated tests.
 
-## Sprint 4: Learning Tracker
+## Sprint 4: Real-Time Collaborative Editing
 
-## Task 14: Track Skills and Learning Goals
+**Reprioritized in (2026-09-13, see `tasks/plan.md`):** this sprint now runs immediately after Sprint 3, ahead of Learning/Career Tracker — it's the feature that actually differentiates a Confluence clone from basic CRUD, so it's no longer stuck behind lower-value boilerplate.
+
+## Task 30: Add WebSocket Infrastructure for Live Page Sessions
+
+**Description:** Add STOMP-over-WebSocket support so a client can open a live session scoped to a specific page, joining a per-page "room" that the server tracks. This is the transport layer collaborative editing and presence build on top of.
+
+**Acceptance criteria:**
+- [ ] A client can open a WebSocket connection authenticated with the same JWT used for REST calls (reuse `JwtService`, don't invent a second auth mechanism).
+- [ ] A client can join a specific page's session (e.g. subscribing to `/topic/pages/{pageId}`) only if their workspace membership role allows at least `VIEWER` access to that page (reuse `MembershipRoleUtils`, don't duplicate the check).
+- [ ] Joining a page session records the connecting user against that page's session state.
+- [ ] Disconnecting (or an explicit leave) removes that user from the session state.
+
+**Verification:**
+- [ ] Tests pass: WebSocket handshake and join/leave session-state tests.
+- [ ] Build succeeds: `./mvnw package` or `mvn package`
+- [ ] Manual check: open two authenticated WebSocket clients on the same `pageId` and confirm the server-side session state shows both.
+
+**Dependencies:** Task 13
+
+**Files likely touched:**
+- new `realtime` module: `adapter` (WebSocket/STOMP config, JWT handshake interceptor), `application` (session tracking), `domain`
+- `pom.xml` (`spring-boot-starter-websocket`)
+
+**Estimated scope:** Medium: 3-5 files
+
+## Task 31: Add Redis Pub/Sub for Edit Broadcast and Presence
+
+**Description:** Back the session/presence state from Task 30 with Redis pub/sub so an edit or presence change on one app instance reaches every subscribed client, not just the ones held in one JVM's in-memory map. This is the first real (non-toy) use of Redis in the project, per the reprioritization rationale in `tasks/plan.md`.
+
+**Acceptance criteria:**
+- [ ] A page-content change from one client is broadcast, via Redis pub/sub, to every other client subscribed to that page's session — including a client connected to a different app instance in a multi-instance run.
+- [ ] Presence join/leave events are broadcast the same way.
+- [ ] Redis-tracked presence is rebuilt correctly after an app restart (no permanently "stuck" phantom participants).
+
+**Verification:**
+- [ ] Tests pass: broadcast/presence integration tests using Testcontainers Redis.
+- [ ] Build succeeds: `./mvnw package` or `mvn package`
+- [ ] Manual check: two browser tabs/WebSocket clients on the same page, running against two local app instances if feasible, confirm edits and presence propagate both ways.
+
+**Dependencies:** Task 30
+
+**Files likely touched:**
+- `realtime/infrastructure` (Redis pub/sub listener/publisher)
+- `pom.xml` (`spring-boot-starter-data-redis`)
+- `compose.yaml` (add a `redis` service)
+
+**Estimated scope:** Medium: 3-5 files
+
+## Task 32: Add Concurrent Edit Conflict Handling for Page Content
+
+**Description:** Handle two users saving edits to the same page at nearly the same time. Start with optimistic concurrency — a `version` column on pages, incremented on every content update — as a deliberate, honest stepping stone toward full operational-transform/CRDT merging later, not a final answer. A save against a stale version is rejected, not silently overwritten.
+
+**Acceptance criteria:**
+- [ ] `pages` rows carry a `version` column that increments on every content update.
+- [ ] Updating a page with an outdated `version` is rejected with a clear conflict response (not a generic 500), which includes the current server version/content so the client can reconcile.
+- [ ] Two sequential updates using the correct version each succeed and the version increments each time.
+
+**Verification:**
+- [ ] Tests pass: unit and integration tests covering the matching-version and stale-version cases.
+- [ ] Build succeeds: `./mvnw package` or `mvn package`
+- [ ] Manual check: simulate two near-simultaneous `PATCH /api/pages/{pageId}` calls with the same starting version via HTTP; confirm the second one gets a conflict response, not a silent overwrite.
+
+**Dependencies:** Task 10 (page revision history — version tracking is a natural extension of the same table)
+
+**Files likely touched:**
+- `page/domain/entity/Page.java`
+- `src/main/resources/mapper/PageMapper.xml`
+- `src/main/resources/db/migration` (new `version` column)
+- `page/application/impl/PageServiceImpl.java`
+
+**Estimated scope:** Medium: 3-5 files
+
+## Task 33: Add Live Presence Indicators
+
+**Description:** Surface who is currently viewing/editing a page in real time, built on the Redis-backed presence data from Task 31, exposed both over the WebSocket topic (for live updates) and a REST fallback endpoint (for a client that just loaded the page).
+
+**Acceptance criteria:**
+- [ ] `GET /api/pages/{pageId}/presence` returns the current list of users present on a page.
+- [ ] The WebSocket topic for a page pushes a presence-changed event whenever someone joins or leaves.
+- [ ] A user's presence expires automatically if their connection drops without a clean leave (e.g. a TTL-based heartbeat in Redis), so a crashed client doesn't show as "present" forever.
+
+**Verification:**
+- [ ] Tests pass: presence expiry/heartbeat tests.
+- [ ] Build succeeds: `./mvnw package` or `mvn package`
+- [ ] Manual check: two clients join, one disconnects abruptly (kill the tab/process without a clean leave), confirm it drops off presence after the TTL window.
+
+**Dependencies:** Task 31
+
+**Files likely touched:**
+- `realtime` module (presence endpoint, heartbeat/TTL logic)
+- `page/adapter/PageController.java` (or a dedicated presence controller)
+
+**Estimated scope:** Small-Medium: 2-4 files
+
+## Checkpoint: Collaboration
+
+- [ ] Two authenticated clients can join the same page's live session and see each other present.
+- [ ] A content edit from one client reaches every other connected client, including across app instances.
+- [ ] Conflicting near-simultaneous saves are detected and surfaced, not silently lost.
+- [ ] Presence recovers correctly after a dropped connection or app restart.
+
+## Sprint 4 (Deferred): Learning Tracker
+
+**Status:** Deferred (2026-09-13) — moved to the backlog in `tasks/plan.md`, behind the new Sprint 4 (Real-Time Collaborative Editing) above. Not core to a Confluence-clone portfolio scope.
+
+## Task 16: Track Skills and Learning Goals
 
 **Description:** Add a learning module where a user can define skills, goals, target dates, and progress status.
 
@@ -389,7 +550,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Medium: 3-5 files
 
-## Task 15: Track Learning Resources and Study Sessions
+## Task 17: Track Learning Resources and Study Sessions
 
 **Description:** Allow users to attach resources to goals and log study sessions with duration, notes, and confidence rating.
 
@@ -403,7 +564,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
 - [ ] Manual check: add resources, log sessions, and inspect progress.
 
-**Dependencies:** Task 14
+**Dependencies:** Task 16
 
 **Files likely touched:**
 - `learning/domain`
@@ -413,7 +574,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Medium: 3-5 files
 
-## Task 16: Generate Review Reminders
+## Task 18: Generate Review Reminders
 
 **Description:** Add deterministic reminder generation for spaced review. Start with a scheduled Spring job and database records before adding RocketMQ.
 
@@ -427,7 +588,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
 - [ ] Manual check: create a session and verify due reminders.
 
-**Dependencies:** Task 15
+**Dependencies:** Task 17
 
 **Files likely touched:**
 - `learning/domain`
@@ -443,9 +604,11 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Time-based behavior is testable with a fixed clock.
 - [ ] Learning tracker is useful without Redis or RocketMQ.
 
-## Sprint 5: Career Tracker
+## Sprint 5 (Deferred): Career Tracker
 
-## Task 17: Track Companies and Job Applications
+**Status:** Deferred (2026-09-13) — moved to the backlog in `tasks/plan.md`. Not core to a Confluence-clone portfolio scope.
+
+## Task 19: Track Companies and Job Applications
 
 **Description:** Add a career module for tracking target companies and job applications with source, role, notes, and status.
 
@@ -470,7 +633,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Medium: 3-5 files
 
-## Task 18: Track Interview Rounds and Application Status Changes
+## Task 20: Track Interview Rounds and Application Status Changes
 
 **Description:** Add interview rounds and explicit status history to make the career tracker more than CRUD.
 
@@ -484,7 +647,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
 - [ ] Manual check: move an application through multiple statuses.
 
-**Dependencies:** Task 17
+**Dependencies:** Task 19
 
 **Files likely touched:**
 - `career/domain`
@@ -494,7 +657,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Medium: 3-5 files
 
-## Task 19: Add Follow-Up Reminders
+## Task 21: Add Follow-Up Reminders
 
 **Description:** Add follow-up reminders for applications and interview rounds using the same reminder concepts learned in the learning tracker.
 
@@ -508,7 +671,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
 - [ ] Manual check: create due and future reminders and verify filtering.
 
-**Dependencies:** Task 18
+**Dependencies:** Task 20
 
 **Files likely touched:**
 - `career/domain`
@@ -524,9 +687,11 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Career state transitions are validated.
 - [ ] Reminder patterns are reused cleanly.
 
-## Sprint 6: Redis, RocketMQ, and Production Readiness
+## Sprint 5 (revised order): Redis, RocketMQ, and Production Readiness
 
-## Task 20: Add Redis Caching and Rate Limiting
+**Reprioritized (2026-09-13, see `tasks/plan.md`):** this sprint now runs directly after Sprint 4 (Real-Time Collaborative Editing), not after the deferred Learning/Career Tracker sprints. Redis pub/sub already exists from Task 31 — Task 22 below adds Redis for general caching/rate-limiting instead, and Task 23 (RocketMQ) is now grounded in a real source of events: page edit/revision activity from Sprint 4.
+
+## Task 22: Add Redis Caching and Rate Limiting
 
 **Description:** Introduce Redis for specific, measurable use cases: caching frequently-read summaries and rate limiting auth-sensitive endpoints.
 
@@ -552,7 +717,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Medium: 3-5 files
 
-## Task 21: Add RocketMQ Domain Events
+## Task 23: Add RocketMQ Domain Events
 
 **Description:** Add event publishing for meaningful domain events, such as page updated, study reminder due, application status changed, and notification requested.
 
@@ -566,7 +731,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
 - [ ] Manual check: trigger an event and observe consumer processing.
 
-**Dependencies:** Task 20
+**Dependencies:** Task 22
 
 **Files likely touched:**
 - `shared/events`
@@ -577,7 +742,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Medium: 3-5 files
 
-## Task 22: Add Audit Records and Notification Records
+## Task 24: Add Audit Records and Notification Records
 
 **Description:** Consume domain events into audit and notification modules. Store immutable audit records and user-visible notification records.
 
@@ -591,7 +756,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
 - [ ] Manual check: perform actions and inspect audit/notification tables.
 
-**Dependencies:** Task 21
+**Dependencies:** Task 23
 
 **Files likely touched:**
 - `audit/application`
@@ -602,7 +767,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Medium: 3-5 files
 
-## Task 23: Add Observability and Operational Endpoints
+## Task 25: Add Observability and Operational Endpoints
 
 **Description:** Make the backend easier to debug and operate through structured logging, actuator health, metrics, and local troubleshooting docs.
 
@@ -616,7 +781,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
 - [ ] Manual check: inspect logs and actuator endpoints during a normal workflow.
 
-**Dependencies:** Task 22
+**Dependencies:** Task 24
 
 **Files likely touched:**
 - `configuration/observability`
@@ -633,9 +798,9 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Audit and notification flows work.
 - [ ] Local operations are debuggable.
 
-## Sprint 7: Portfolio Hardening
+## Sprint 6 (revised order): Portfolio Hardening
 
-## Task 24: Add API Documentation and Example Requests
+## Task 26: Add API Documentation and Example Requests
 
 **Description:** Add a clear API reference and runnable example requests for the main demo workflows.
 
@@ -649,7 +814,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
 - [ ] Manual check: follow docs from a clean local start.
 
-**Dependencies:** Task 23
+**Dependencies:** Task 25
 
 **Files likely touched:**
 - `docs/api.md`
@@ -658,7 +823,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Small: 1-2 files
 
-## Task 25: Add CI and Quality Gates
+## Task 27: Add CI and Quality Gates
 
 **Description:** Add GitHub Actions or the chosen CI tool to run build and tests on every push.
 
@@ -672,7 +837,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: CI package/build job succeeds.
 - [ ] Manual check: push a branch and inspect CI result.
 
-**Dependencies:** Task 24
+**Dependencies:** Task 26
 
 **Files likely touched:**
 - `.github/workflows/build.yml`
@@ -680,7 +845,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Small: 1-2 files
 
-## Task 26: Write Architecture Documentation and Project README
+## Task 28: Write Architecture Documentation and Project README
 
 **Description:** Document the modular monolith, module ownership, dependency rules, local setup, and demo workflow so the portfolio story is obvious.
 
@@ -694,7 +859,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: `./mvnw package` or `mvn package`
 - [ ] Manual check: follow README from a clean checkout.
 
-**Dependencies:** Task 25
+**Dependencies:** Task 27
 
 **Files likely touched:**
 - `README.md`
@@ -703,7 +868,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 
 **Estimated scope:** Small: 1-2 files
 
-## Task 27: Add Deployment-Ready Docker Compose Profile
+## Task 29: Add Deployment-Ready Docker Compose Profile
 
 **Description:** Add a Compose profile that runs the app plus MySQL, Redis, RocketMQ, and required configuration for a local production-like demo.
 
@@ -717,7 +882,7 @@ Archiving is not deletion — it's a reversible, "settled but not gone" state (t
 - [ ] Build succeeds: Docker image builds successfully.
 - [ ] Manual check: run full stack and complete demo workflow.
 
-**Dependencies:** Task 26
+**Dependencies:** Task 28
 
 **Files likely touched:**
 - `Dockerfile`

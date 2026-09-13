@@ -3,7 +3,7 @@ package com.xuannie.devatlas.page.common.command;
 import com.xuannie.devatlas.common.command.Command;
 
 public record CreatePageRevisionCommand(
-        Long ownerId,
+        Long userId,
         Long pageId,
         String name,
         String content,

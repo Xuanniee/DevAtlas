@@ -17,6 +17,8 @@ The project should start as a modular monolith. That keeps one deployable Spring
 - Keep frontend optional during the first 2-3 months. Use REST APIs, OpenAPI/HTTP files, or a thin UI only after the backend flows are stable.
 - Address pages flatly (`/api/pages/{pageId}`, `/api/pages` for creation), not nested under `/api/workspaces/{workspaceSlug}`. `pageId` is already globally unique, so nesting would only add a path segment nobody needs to resolve the resource, and would force every page-creation request to keep a URL-level workspace slug in sync with the actual parent page's workspace. A workspace's root page is provisioned automatically as part of workspace creation (not through the page-creation endpoint), so `Workspace.homePageId` is always populated by the time a client can see the workspace.
 - Archiving a page is not deletion — model it on Confluence's distinction between Archive and Trash. Archived content stays fully intact and readable through its own dedicated view; it's just pulled out of normal navigation, listings, and search. It's reversible (restorable) and cascades to the whole subtree, so a page is never left dangling under an invisible archived ancestor. Persistence-wise this stays a nullable `archived_at` timestamp on the row (no separate archival table) — the row never moves, queries just filter on it. Because nothing is actually destroyed, the endpoint is `POST /api/pages/{pageId}/archive`, not `DELETE` — `DELETE`'s semantics (destroy the resource) don't apply here.
+- Email verification and password reset share one underlying shape: generate a short-lived, single-use secret, hand it to the user out-of-band, validate it, then consume it so it can't be replayed. Build email verification (Task 14) first to establish this pattern once, then reuse it for password reset (Task 15) rather than developing two independent mechanisms. No real email provider is wired up yet — codes/tokens are logged or returned directly for local development, with actual email delivery deferred until it's needed.
+- **Reprioritization (2026-09-13):** the original Sprint 4/5 (Learning Tracker, Career Tracker) and Task 14/15 (email verification, password reset) are generic SaaS boilerplate, not things that make DevAtlas read as a Confluence clone — they're deferred to a backlog (see below) rather than blocking further work. Real-time collaborative editing is the feature that actually differentiates a knowledge-base clone from basic CRUD, so it moves up immediately after Sprint 3's core identity/membership work (Tasks 11-13). Redis is pulled forward with it, but only because collaborative editing gives Redis a concrete job (pub/sub for live broadcast and presence) — this still respects the original rule that infrastructure should serve a real flow, not be added speculatively. RocketMQ stays deferred until collaborative editing produces an actual event worth queuing (e.g. edit/revision activity feeding notifications), rather than being introduced generically.
 
 ## Sprint Roadmap
 
@@ -66,7 +68,7 @@ Goal: build the Confluence-like core, scoped to personal use: pages, hierarchy, 
 
 ### Sprint 3: Identity and Access Control
 
-Goal: learn Spring Security, current-user handling, ownership, and authorization.
+Goal: learn Spring Security, current-user handling, ownership, and authorization. Scope trimmed (2026-09-13) to the core identity/permission model needed by everything downstream — email verification and password reset moved to the deferred backlog.
 
 - [ ] Task 11: Add user registration and login
 - [ ] Task 12: Protect workspace and page APIs with current-user ownership
@@ -78,42 +80,30 @@ Goal: learn Spring Security, current-user handling, ownership, and authorization
 - [ ] Users cannot access another user's private workspace
 - [ ] Authorization behavior is covered by tests
 
-### Sprint 4: Learning Tracker
+### Sprint 4: Real-Time Collaborative Editing
 
-Goal: add a personally useful product domain that reuses the same backend patterns with more business rules.
+Goal: build the feature that actually differentiates a Confluence clone from basic CRUD — multiple users viewing and editing the same page concurrently. This is the new priority (2026-09-13), moved up ahead of Learning/Career Tracker because it's core to the product, not boilerplate.
 
-- [ ] Task 14: Track skills and learning goals
-- [ ] Task 15: Track learning resources and study sessions
-- [ ] Task 16: Generate review reminders
+- [ ] Task 30: Add WebSocket infrastructure for live page sessions
+- [ ] Task 31: Add Redis pub/sub for edit broadcast and presence
+- [ ] Task 32: Add concurrent edit conflict handling for page content
+- [ ] Task 33: Add live presence indicators
 
-### Checkpoint: Learning
+### Checkpoint: Collaboration
 
-- [ ] A user can define a skill goal and track progress
-- [ ] Study sessions update progress consistently
-- [ ] Reminder generation is testable and deterministic
+- [ ] Two authenticated clients can join the same page's live session and see each other present
+- [ ] A content edit from one client reaches every other connected client, including across app instances
+- [ ] Conflicting near-simultaneous saves are detected and surfaced, not silently lost
+- [ ] Presence recovers correctly after a dropped connection or app restart
 
-### Sprint 5: Career Tracker
+### Sprint 5: Redis, RocketMQ, and Production Readiness
 
-Goal: add a second product domain with workflow state, filtering, and follow-ups.
+Goal: introduce remaining infrastructure only where it serves already-working product flows. Redis pub/sub already exists from Sprint 4 (Task 31) — this sprint adds Redis for general caching/rate-limiting, and only now introduces RocketMQ, once collaborative editing has produced real events (edit/revision activity) worth queuing.
 
-- [ ] Task 17: Track companies and job applications
-- [ ] Task 18: Track interview rounds and application status changes
-- [ ] Task 19: Add follow-up reminders
-
-### Checkpoint: Career
-
-- [ ] A user can track an application from saved to offer/rejected/closed
-- [ ] Interview rounds and follow-ups are queryable
-- [ ] State transitions are validated
-
-### Sprint 6: Redis, RocketMQ, and Production Readiness
-
-Goal: introduce infrastructure only where it serves already-working product flows.
-
-- [ ] Task 20: Add Redis caching and rate limiting
-- [ ] Task 21: Add RocketMQ domain events
-- [ ] Task 22: Add audit records and notification records
-- [ ] Task 23: Add observability and operational endpoints
+- [ ] Task 22: Add Redis caching and rate limiting
+- [ ] Task 23: Add RocketMQ domain events (page edit/revision activity from Sprint 4)
+- [ ] Task 24: Add audit records and notification records
+- [ ] Task 25: Add observability and operational endpoints
 
 ### Checkpoint: Enterprise Backend
 
@@ -122,14 +112,14 @@ Goal: introduce infrastructure only where it serves already-working product flow
 - [ ] Audit and notification flows survive retries
 - [ ] Logs, health checks, and metrics are usable during local debugging
 
-### Sprint 7: Portfolio Hardening
+### Sprint 6: Portfolio Hardening
 
 Goal: make the project impressive to inspect, run, and discuss.
 
-- [ ] Task 24: Add API documentation and example requests
-- [ ] Task 25: Add CI and quality gates
-- [ ] Task 26: Write architecture documentation and project README
-- [ ] Task 27: Add deployment-ready Docker Compose profile
+- [ ] Task 26: Add API documentation and example requests
+- [ ] Task 27: Add CI and quality gates
+- [ ] Task 28: Write architecture documentation and project README
+- [ ] Task 29: Add deployment-ready Docker Compose profile
 
 ### Checkpoint: Portfolio
 
@@ -137,6 +127,19 @@ Goal: make the project impressive to inspect, run, and discuss.
 - [ ] CI runs tests automatically
 - [ ] Architecture decisions are documented
 - [ ] The project has a clear demo path
+
+### Backlog: Deferred (low priority for a Confluence-clone scope)
+
+Not dropped, just deprioritized (2026-09-13) — generic SaaS boilerplate that doesn't showcase the core product. Revisit after Sprint 6 if there's time, or skip entirely for a portfolio release.
+
+- [ ] Task 14: Add email verification via one-time code
+- [ ] Task 15: Add forgot password / password reset flow
+- [ ] Task 16: Track skills and learning goals
+- [ ] Task 17: Track learning resources and study sessions
+- [ ] Task 18: Generate review reminders
+- [ ] Task 19: Track companies and job applications
+- [ ] Task 20: Track interview rounds and application status changes
+- [ ] Task 21: Add follow-up reminders
 
 ## Dependency Graph
 
@@ -155,18 +158,29 @@ Buildable Spring Boot app
             |
             +-- Workspace membership and authorization
                     |
-                    +-- Learning tracker
+                    +-- Real-time collaborative editing (WebSocket sessions)
                     |       |
-                    |       +-- Reminder generation
+                    |       +-- Redis pub/sub (presence + edit broadcast)
+                    |       |       |
+                    |       |       +-- Live presence indicators
+                    |       |
+                    |       +-- Concurrent edit conflict handling
                     |
-                    +-- Career tracker
+                    +-- Redis caching / rate limiting (general, reuses Sprint 4's Redis dependency)
+                    |
+                    +-- RocketMQ domain events (fed by collaborative-editing activity)
                             |
-                            +-- Follow-up reminders
+                            +-- Audit and notification records
 
-Redis caching depends on stable read/write flows.
-RocketMQ events depend on stable domain events.
-Audit and notification depend on identity plus event publishing.
 CI and deployment depend on a stable build and test command.
+
+Deferred backlog (not on the critical path):
+    Identity and current-user abstraction
+        +-- Email verification (one-time code)
+        |       +-- Forgot password / reset flow (reuses the verification code pattern)
+        +-- Workspace membership and authorization
+                +-- Learning tracker --- Reminder generation
+                +-- Career tracker --- Follow-up reminders
 ```
 
 ## Suggested Weekly Rhythm
@@ -175,12 +189,12 @@ CI and deployment depend on a stable build and test command.
 - Weeks 2-3: Sprint 1
 - Weeks 4-5: Sprint 2
 - Weeks 6-7: Sprint 3
-- Weeks 8-9: Sprint 4
-- Weeks 10-11: Sprint 5
-- Weeks 12-13: Sprint 6
-- Week 14: Sprint 7
+- Weeks 8-9: Sprint 4 (Real-Time Collaborative Editing)
+- Weeks 10-11: Sprint 5 (Redis, RocketMQ, Production Readiness)
+- Week 12: Sprint 6 (Portfolio Hardening)
+- Backlog (only if time remains): email verification/password reset, Learning Tracker, Career Tracker
 
-If time is tight, ship Sprints 0-4 first. A strong knowledge base plus learning tracker is already a coherent portfolio project. Career tracking, RocketMQ, and full production hardening can continue after the first release.
+If time is tight, ship Sprints 0-4 first. A workspace/page core plus live collaborative editing is a coherent, differentiated portfolio project on its own. The deferred backlog (account hardening, learning tracker, career tracker) can continue after the first release, if at all.
 
 ## Risks and Mitigations
 
